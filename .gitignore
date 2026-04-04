@@ -1,0 +1,30 @@
+# Compiled output
+dist/
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Per-project Apex state (generated at runtime)
+.apex/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.swp
+
+# TypeScript build info
+*.tsbuildinfo
