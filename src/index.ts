@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { execSync } from 'child_process';
 import { Command, Option } from 'commander';
 import { KeepCodeSession } from './ui/session.js';
 import { auth } from './auth/index.js';
@@ -128,6 +129,16 @@ program
       console.log(`  ${date}  [${s.provider}/${s.model}]  ${s.task?.slice(0, 60) ?? ''}  (${s.status})`);
     }
     console.log();
+  });
+
+// ── Reinstall command ─────────────────────────────────────────────────────────
+program
+  .command('reinstall')
+  .description('Force reinstall KeepCode globally (npm install -g keepcode@latest)')
+  .action(() => {
+    console.log('\n  Reinstalling KeepCode globally...\n');
+    execSync('npm install -g keepcode@latest', { stdio: 'inherit' });
+    console.log('\n  ✓ Reinstall complete.\n');
   });
 
 // ── Update command ────────────────────────────────────────────────────────────

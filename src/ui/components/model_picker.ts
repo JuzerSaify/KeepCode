@@ -1,6 +1,6 @@
-import readline from 'readline';
+import search from '@inquirer/search';
+import select from '@inquirer/select';
 import chalk from 'chalk';
-import { theme } from '../theme.js';
 
 export interface ModelChoice {
   name: string;
@@ -13,101 +13,61 @@ export interface ModelChoice {
   toolSupport: boolean;
 }
 
-/** Track how many lines were printed so we can redraw in-place */
-function printLines(lines: string[]): void {
-  process.stdout.write(lines.join('\n') + '\n');
-}
+const PROVIDERS = [
+  { value: 'ollama',    name: 'Ollama (local)',  description: 'Free · private · offline — any Ollama model' },
+  { value: 'openai',   name: 'OpenAI',           description: 'GPT-4o, o3-mini · needs OPENAI_API_KEY' },
+  { value: 'anthropic',name: 'Anthropic',        description: 'Claude Sonnet / Haiku · needs ANTHROPIC_API_KEY' },
+  { value: 'gemini',   name: 'Google Gemini',    description: 'Gemini 2.5 Flash · needs GEMINI_API_KEY' },
+];
 
-function clearPrinted(lineCount: number): void {
-  if (lineCount > 0) {
-    // Move cursor up lineCount rows then clear from cursor to end
-    process.stdout.write(`\x1B[${lineCount}A\x1B[J`);
-  }
-}
-
-/** Interactive keyboard-driven model picker (in-place, no full-screen clear) */
+/** Searchable interactive model picker — type to filter, ↑↓ to navigate, Enter to select */
 export async function pickModel(models: ModelChoice[]): Promise<string> {
   if (models.length === 0) {
-    throw new Error('No Ollama models available. Run: ollama pull <model>');
+    throw new Error('No models available. Run: ollama pull <model>');
   }
+  // Non-interactive stdin (piped/CI): skip UI and return first model
+  if (!process.stdin.isTTY) return models[0].name;
 
-  return new Promise((resolve) => {
-    let selected  = 0;
-    let lastLines = 0;
-
-    const buildLines = (): string[] => {
-      const header = [
-        '',
-        `  ${chalk.hex('#7C3AED').bold('KeepCode')} ${theme.dim('— select a model')}`,
-        `  ${theme.dim('─'.repeat(46))}`,
-      ];
-      const rows = models.map((m, i) => {
-        const active  = i === selected;
-        const cursor  = active ? chalk.hex('#7C3AED')('▶ ') : '  ';
-        const label   = m.displayName ?? m.name;
-        const name    = active ? chalk.hex('#7C3AED').bold(label) : theme.muted(label);
-        // For cloud providers show context window; for Ollama show file size
-        const meta    = m.contextLength
-          ? theme.dim(` ${Math.round(m.contextLength / 1000)}k ctx`)
-          : m.size ? theme.dim(` ${m.size}`) : '';
-        const tools   = m.toolSupport
-          ? chalk.hex('#10B981')(' ✓ tools')
-          : theme.muted(' ✗ tools');
-        return `  ${cursor}${name}${meta}${tools}`;
-      });
-      const footer = [
-        '',
-        `  ${theme.dim('↑↓ navigate   Enter select   q quit')}`,
-        '',
-      ];
-      return [...header, ...rows, ...footer];
+  const choices = models.map((m) => {
+    const rawLabel = m.displayName ?? m.name;
+    const meta     = m.contextLength
+      ? `${Math.round(m.contextLength / 1000)}k ctx`
+      : m.size ? m.size : '';
+    const toolTag  = m.toolSupport ? chalk.hex('#10B981')('✓ tools') : chalk.dim('✗ tools');
+    const desc     = chalk.dim('  id: ') + chalk.bold(m.name)
+                   + (meta ? chalk.dim('  ·  ' + meta) : '')
+                   + '  ' + toolTag;
+    return {
+      name:        chalk.hex('#7C3AED').bold(rawLabel),
+      value:       m.name,
+      description: desc,
+      short:       m.name,
+      _raw:        rawLabel.toLowerCase(),
     };
+  });
 
-    const render = () => {
-      const lines = buildLines();
-      clearPrinted(lastLines);
-      printLines(lines);
-      lastLines = lines.length;
-    };
+  return search<string>({
+    message: 'Select a model  (type to filter)',
+    source: (input?: string) => {
+      if (!input) return choices;
+      const q = input.toLowerCase();
+      return choices.filter((c) => c.value.toLowerCase().includes(q) || c._raw.includes(q));
+    },
+    pageSize: 12,
+  });
+}
 
-    render();
-
-    readline.emitKeypressEvents(process.stdin);
-    if (process.stdin.isTTY) process.stdin.setRawMode(true);
-
-    const onKey = (_chunk: string, key: { name: string; ctrl: boolean }) => {
-      if (!key) return;
-
-      if (key.name === 'up') {
-        selected = (selected - 1 + models.length) % models.length;
-        render();
-      } else if (key.name === 'down') {
-        selected = (selected + 1) % models.length;
-        render();
-      } else if (key.name === 'return') {
-        cleanup();
-        resolve(models[selected].name);
-      } else if (key.name === 'q' || (key.ctrl && key.name === 'c')) {
-        cleanup();
-        process.exit(0);
-      }
-    };
-
-    const cleanup = () => {
-      if (process.stdin.isTTY) process.stdin.setRawMode(false);
-      process.stdin.off('keypress', onKey);
-      process.stdin.pause();
-    };
-
-    if (!process.stdin.isTTY) {
-      // Non-interactive stdin (piped): skip UI, return first model
-      cleanup();
-      resolve(models[0].name);
-      return;
-    }
-
-    process.stdin.on('keypress', onKey);
-    process.stdin.resume();
+/** Interactive provider picker */
+export async function pickProvider(): Promise<string> {
+  if (!process.stdin.isTTY) return 'ollama';
+  return select<string>({
+    message: 'Select AI provider',
+    choices: PROVIDERS.map((p) => ({
+      name:        chalk.hex('#7C3AED').bold(p.name),
+      value:       p.value,
+      description: chalk.dim('  ' + p.description),
+      short:       p.value,
+    })),
   });
 }
 

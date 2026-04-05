@@ -5,7 +5,7 @@ import { createProvider } from '../providers/factory.js';
 import { EventRenderer } from './renderer.js';
 import { printBanner, printCompactHeader, detectVSCodeVersion } from './components/banner.js';
 import { Spinner } from './components/spinner.js';
-import { pickModel } from './components/model_picker.js';
+import { pickModel, pickProvider } from './components/model_picker.js';
 import { renderTable } from './components/table.js';
 import { theme } from './theme.js';
 import { loadConfig, initConfig } from '../config/loader.js';
@@ -159,7 +159,27 @@ export class KeepCodeSession {
       case '/model': {
         const modelName = cmd.split(' ').slice(1).join(' ').trim();
         if (!modelName) {
-          console.log(`\n  Usage: /model <name>  — current: ${theme.accent(this.config.model)}\n`);
+          const spinner = new Spinner('Fetching models...').start();
+          try {
+            const provider = createProvider(this.config);
+            const models   = await provider.fetchModels().catch(() => []);
+            spinner.stop();
+            if (models.length === 0) {
+              console.log(`\n  No models found for ${this.config.provider}. Use: /model <name>\n`);
+              break;
+            }
+            const choices = models.map((m) => ({
+              name:          m.name,
+              displayName:   m.displayName,
+              size:          m.size ? `${(m.size / 1e9).toFixed(1)} GB` : '',
+              contextLength: m.contextLength,
+              toolSupport:   m.supportsTools ?? true,
+            }));
+            this.config.model = await pickModel(choices);
+            console.log(`\n  Switched model → ${theme.accent(this.config.model)}\n`);
+          } catch {
+            spinner.stop();
+          }
         } else {
           this.config.model = modelName;
           console.log(`\n  Switched model → ${theme.accent(modelName)}\n`);
@@ -167,12 +187,16 @@ export class KeepCodeSession {
         break;
       }
       case '/provider': {
-        const provName = cmd.split(' ').slice(1).join(' ').trim().toLowerCase();
+        let provName = cmd.split(' ').slice(1).join(' ').trim().toLowerCase();
         const validProviders = ['openai', 'anthropic', 'gemini', 'ollama'];
         if (!provName) {
-          console.log(`\n  Provider: ${theme.accent(this.config.provider)}  Model: ${theme.accent(this.config.model)}`);
-          console.log(`  ${theme.dim('Switch with:')} ${theme.accent('/provider <name>')}  ${theme.dim('(openai · anthropic · gemini · ollama)')}\n`);
-        } else if (!validProviders.includes(provName)) {
+          try {
+            provName = await pickProvider();
+          } catch {
+            break;
+          }
+        }
+        if (!validProviders.includes(provName)) {
           console.log(`\n  ${theme.warning(`Unknown provider: ${provName}`)}`);
           console.log(`  ${theme.dim('Valid options:')} ${validProviders.map((p) => theme.accent(p)).join(theme.dim(' · '))}\n`);
         } else {
