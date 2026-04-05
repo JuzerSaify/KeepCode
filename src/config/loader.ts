@@ -46,6 +46,22 @@ export async function loadConfig(workingDir: string): Promise<Partial<AgentConfi
 }
 
 /**
+ * Persist a partial config update (model, provider, apiBaseUrl, etc.) to
+ * .keepcode/config.json, merging with whatever is already on disk.
+ */
+export async function saveConfig(workingDir: string, updates: Partial<ConfigFile>): Promise<void> {
+  const dir = path.join(workingDir, KEEPCODE_DIR);
+  const configPath = path.join(dir, 'config.json');
+  let existing: ConfigFile = {};
+  try {
+    existing = JSON.parse(await fs.readFile(configPath, 'utf8')) as ConfigFile;
+  } catch { /* file may not exist yet, that's fine */ }
+  const merged = { ...existing, ...updates };
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(configPath, JSON.stringify(merged, null, 2) + '\n', 'utf8');
+}
+
+/**
  * Write the default config file to .keepcode/config.json if it doesn't exist.
  */
 export async function initConfig(workingDir: string): Promise<void> {

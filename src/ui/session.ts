@@ -8,7 +8,7 @@ import { Spinner } from './components/spinner.js';
 import { pickModel, pickProvider } from './components/model_picker.js';
 import { renderTable } from './components/table.js';
 import { theme } from './theme.js';
-import { loadConfig, initConfig } from '../config/loader.js';
+import { loadConfig, initConfig, saveConfig } from '../config/loader.js';
 import { DEFAULT_CONFIG, OLLAMA_BASE_URL } from '../config/defaults.js';
 import boxen from 'boxen';
 import { auth, type StoredSession } from '../auth/index.js';
@@ -239,6 +239,7 @@ export class KeepCodeSession {
               rl.resume();
             }
             console.log(`\n  ${theme.success('\u2714')}  Model \u2192 ${theme.accent(this.config.model)}\n`);
+            await saveConfig(this.config.workingDir, { model: this.config.model }).catch(() => {});
           } catch {
             this.pickerActive = false;
             process.stdin.resume();
@@ -247,6 +248,7 @@ export class KeepCodeSession {
           }
         } else {
           this.config.model = modelName;
+          await saveConfig(this.config.workingDir, { model: modelName }).catch(() => {});
           console.log(`\n  Switched model → ${theme.accent(modelName)}\n`);
         }
         break;
@@ -308,6 +310,11 @@ export class KeepCodeSession {
               this.config.model = await pickModel(choices);
             }
             console.log(`  ${theme.dim('Switched:')} ${theme.accent(prevProvider)} ${theme.dim('→')} ${theme.accent(provName)}\n`);
+            await saveConfig(this.config.workingDir, {
+              provider:   this.config.provider,
+              model:      this.config.model,
+              apiBaseUrl: this.config.apiBaseUrl,
+            }).catch(() => {});
           } catch (e) {
             spinner2.fail(`Failed to switch to ${provName}`);
             this.config.provider = prevProvider;
