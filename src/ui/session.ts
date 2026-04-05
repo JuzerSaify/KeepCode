@@ -21,17 +21,17 @@ const PACKAGE_VERSION = '1.5.0';
 
 /** Commands available in the REPL */
 const COMMANDS: Record<string, string> = {
-  '/help':         'Show available commands',
-  '/models':       'List available models for current provider',
-  '/model <name>': 'Switch to a different model',
-  '/provider [name]': 'Show or switch AI provider (openai, anthropic, gemini, ollama)',
-  '/clear':        'Clear conversation history',
-  '/history':      'Show conversation history summary',
-  '/sessions':     'Show recent cloud sessions (requires login)',
-  '/status':       'Show current session config',
-  '/whoami':       'Show current logged-in user',
-  '/tools':        'List all registered tools by category',
-  '/exit':         'Exit KeepCode',
+  '/model [name]':    'Switch model — no arg opens interactive search picker',
+  '/provider [name]': 'Switch provider — no arg opens interactive picker',
+  '/models':          'List all available models for current provider',
+  '/clear':           'Clear conversation history',
+  '/history':         'Show conversation summary',
+  '/sessions':        'Cloud session history  (requires login)',
+  '/status':          'Show config & stats',
+  '/whoami':          'Show logged-in user',
+  '/tools':           'List registered tools by category',
+  '/help':            'Show this help',
+  '/exit':            'Exit KeepCode',
 };
 
 export class KeepCodeSession {
@@ -39,6 +39,7 @@ export class KeepCodeSession {
   private history: Message[] = [];
   private renderer = new EventRenderer();
   private isRunning = false;
+  private pickerActive = false;
 
   constructor(config: AgentConfig) {
     this.config = config;
@@ -112,6 +113,7 @@ export class KeepCodeSession {
     });
 
     rl.on('close', () => {
+      if (this.pickerActive) return; // picker is active — suppress spurious close
       console.log('\n  Goodbye.\n');
       process.exit(0);
     });
@@ -125,12 +127,32 @@ export class KeepCodeSession {
 
     switch (base) {
       case '/help': {
-        console.log(`\n  ${theme.brand.bold('Available commands')}\n`);
-        for (const [name, desc] of Object.entries(COMMANDS)) {
-          const pad = ' '.repeat(Math.max(1, 22 - name.length));
-          console.log(`    ${theme.brand(name)}${pad}${theme.muted(desc)}`);
-        }
-        console.log();
+        console.log(`\n  ${theme.brand.bold('KeepCode')} ${theme.dim('Commands')}\n`);
+        const section = (icon: string, label: string, pairs: [string, string][]) => {
+          console.log(`  ${theme.accent(icon)} ${theme.accent.bold(label)}`);
+          for (const [name, desc] of pairs) {
+            const pad = ' '.repeat(Math.max(1, 24 - name.length));
+            console.log(`    ${theme.brand(name)}${pad}${theme.muted(desc)}`);
+          }
+          console.log();
+        };
+        section('◈', 'Model & Provider', [
+          ['/model [name]',    'Switch model — no arg: interactive search'],
+          ['/provider [name]', 'Switch provider — no arg: interactive'],
+          ['/models',          'List all available models'],
+        ]);
+        section('◆', 'Session', [
+          ['/clear',    'Clear conversation history'],
+          ['/history',  'Show conversation summary'],
+          ['/sessions', 'Cloud session history  (requires login)'],
+          ['/status',   'Show config & stats'],
+        ]);
+        section('○', 'System', [
+          ['/tools',   'List registered tools by category'],
+          ['/whoami',  'Show logged-in user'],
+          ['/help',    'Show this help'],
+          ['/exit',    'Exit KeepCode'],
+        ]);
         break;
       }
       case '/models': {
@@ -175,9 +197,20 @@ export class KeepCodeSession {
               contextLength: m.contextLength,
               toolSupport:   m.supportsTools ?? true,
             }));
-            this.config.model = await pickModel(choices);
-            console.log(`\n  Switched model → ${theme.accent(this.config.model)}\n`);
+            rl.pause();
+            this.pickerActive = true;
+            try {
+              this.config.model = await pickModel(choices);
+            } finally {
+              this.pickerActive = false;
+              process.stdin.resume();
+              rl.resume();
+            }
+            console.log(`\n  ${theme.success('\u2714')}  Model \u2192 ${theme.accent(this.config.model)}\n`);
           } catch {
+            this.pickerActive = false;
+            process.stdin.resume();
+            rl.resume();
             spinner.stop();
           }
         } else {
@@ -190,11 +223,19 @@ export class KeepCodeSession {
         let provName = cmd.split(' ').slice(1).join(' ').trim().toLowerCase();
         const validProviders = ['openai', 'anthropic', 'gemini', 'ollama'];
         if (!provName) {
+          rl.pause();
+          this.pickerActive = true;
           try {
             provName = await pickProvider();
           } catch {
+            this.pickerActive = false;
+            process.stdin.resume();
+            rl.resume();
             break;
           }
+          this.pickerActive = false;
+          process.stdin.resume();
+          rl.resume();
         }
         if (!validProviders.includes(provName)) {
           console.log(`\n  ${theme.warning(`Unknown provider: ${provName}`)}`);
@@ -388,7 +429,7 @@ export class KeepCodeSession {
     // ── Login nudge (non-blocking) ────────────────────────────────────────
     const user = await auth.getUser().catch(() => null);
     if (!user) {
-      console.log(`\n  ${theme.dim('\u{1F4A1} Sign in for cloud sync & session history:  ')}${theme.accent('keepcode login')}`);
+      console.log(`\n  ${theme.brand('\u25c6')} ${theme.dim('Sign in for cloud sync & session history:')}  ${theme.accent('keepcode login')}`);
     } else {
       console.log(`  ${theme.dim(`Signed in as ${user.email}`)}`);
     }

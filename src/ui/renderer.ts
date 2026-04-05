@@ -33,7 +33,7 @@ const STATUS_HINTS: Record<string, string> = {
 };
 
 /** Compact gradient separator bar */
-const GRAD_SEP = chalk.hex('#7C3AED')('░') + chalk.hex('#4F46E5')('▒') + chalk.hex('#06B6D4')('▓') + chalk.hex('#0891B2')('█') + chalk.hex('#0E7490')('▓') + chalk.hex('#06B6D4')('▒') + chalk.hex('#7C3AED')('░');
+const GRAD_SEP = chalk.hex('#7C3AED')('──') + chalk.hex('#6D28D9')('──') + chalk.hex('#4F46E5')('──') + chalk.hex('#06B6D4')('──') + chalk.hex('#0891B2')('──') + chalk.hex('#06B6D4')('──') + chalk.hex('#4F46E5')('──') + chalk.hex('#7C3AED')('──');
 
 // ── Inline markdown helpers ───────────────────────────────────────────────────
 
@@ -246,8 +246,8 @@ export class EventRenderer {
     this.stopSpinner();
     if (!this.inStream) {
       const cols = Math.min(process.stdout.columns ?? 80, 100);
-      const sep  = chalk.dim('─'.repeat(cols - 2));
-      process.stdout.write(`\n  ${chalk.white.bold('▸ Streaming Response')}\n  ${sep}\n  `);
+      const sep  = chalk.dim('─'.repeat(Math.max(2, cols - 24)));
+      process.stdout.write(`\n  ${chalk.hex('#06B6D4').bold('▸  Streaming')}  ${sep}\n  `);
       this.inStream = true;
     }
     process.stdout.write(chalk.white(token));
@@ -259,7 +259,8 @@ export class EventRenderer {
     this.flushStream();
     this.lastStatus = '';
     this.lastThoughtContent = content.trim();
-    console.log();
+    const cols = Math.min(process.stdout.columns ?? 80, 100);
+    console.log(`\n  ${chalk.hex('#06B6D4').bold('\u25c6  Response')}  ${chalk.dim('\u2500'.repeat(Math.max(2, cols - 18)))}`);
     renderMd(content);
   }
 
@@ -269,7 +270,7 @@ export class EventRenderer {
     this.lastStatus = '';
     const cols = Math.min(process.stdout.columns ?? 80, 100);
     const bar  = chalk.dim('─'.repeat(cols - 4));
-    console.log(`\n  ${chalk.white.bold('◈ Plan')}  ${GRAD_SEP}`);
+    console.log(`\n  ${chalk.hex('#7C3AED').bold('◈  Plan')}  ${GRAD_SEP}`);
     console.log(`  ${bar}`);
     for (let i = 0; i < steps.length; i++) {
       console.log(`  ${chalk.hex('#06B6D4').bold(String(i + 1).padStart(2) + '.')}  ${chalk.white(steps[i])}`);
@@ -284,7 +285,7 @@ export class EventRenderer {
     this.toolStartMs = Date.now();
 
     const cols      = Math.min(process.stdout.columns ?? 80, 100);
-    const toolLabel = chalk.hex('#F59E0B').bold(`⚙  ${name}`);
+    const toolLabel = chalk.hex('#F59E0B').bold(`⚡  ${name}`);
     const sep       = chalk.dim('─'.repeat(cols - 4));
     console.log(`\n  ${toolLabel}\n  ${sep}`);
     for (const [k, v] of Object.entries(args)) {
@@ -339,7 +340,7 @@ export class EventRenderer {
     this.flushStream();
     const pct = Math.round((1 - to / from) * 100);
     console.log(
-      `\n  ${theme.info('⟳')}  Context compressed  ` +
+      `\n  ${theme.info('↺')}  Context compressed  ` +
       `${theme.warning(String(from))} → ${theme.success(String(to))} tokens  ` +
       theme.dim(`(${pct}% freed)`)
     );
@@ -415,7 +416,7 @@ export class EventRenderer {
         width,
         borderStyle:      'round',
         borderColor:      '#10B981',
-        title:            chalk.hex('#10B981').bold('  ✓  Task Complete  '),
+        title:            chalk.hex('#10B981').bold('  ✔  Task Complete  '),
         titleAlignment:   'center',
       })
     );
@@ -426,7 +427,7 @@ export class EventRenderer {
     this.stopSpinner();
     this.flushStream();
     this.lastStatus = '';
-    console.log(`\n  ${theme.warning('⊘')}  ${theme.warning.bold('Aborted.')}\n`);
+    console.log(`\n  ${theme.warning('⊗')}  ${theme.warning.bold('Aborted.')}\n`);
   }
 
   private onIteration(n: number, max: number): void {

@@ -14,10 +14,10 @@ export interface ModelChoice {
 }
 
 const PROVIDERS = [
-  { value: 'ollama',    name: 'Ollama (local)',  description: 'Free · private · offline — any Ollama model' },
-  { value: 'openai',   name: 'OpenAI',           description: 'GPT-4o, o3-mini · needs OPENAI_API_KEY' },
-  { value: 'anthropic',name: 'Anthropic',        description: 'Claude Sonnet / Haiku · needs ANTHROPIC_API_KEY' },
-  { value: 'gemini',   name: 'Google Gemini',    description: 'Gemini 2.5 Flash · needs GEMINI_API_KEY' },
+  { value: 'ollama',    name: '○  Ollama (local)',  description: 'Free · private · offline · no API key needed' },
+  { value: 'openai',   name: '◈  OpenAI',          description: 'GPT-4o · o3-mini · needs OPENAI_API_KEY' },
+  { value: 'anthropic',name: '◆  Anthropic',        description: 'Claude Sonnet · Haiku · needs ANTHROPIC_API_KEY' },
+  { value: 'gemini',   name: '◉  Google Gemini',    description: 'Gemini 2.5 Flash · needs GEMINI_API_KEY' },
 ];
 
 /** Searchable interactive model picker — type to filter, ↑↓ to navigate, Enter to select */
@@ -28,30 +28,34 @@ export async function pickModel(models: ModelChoice[]): Promise<string> {
   // Non-interactive stdin (piped/CI): skip UI and return first model
   if (!process.stdin.isTTY) return models[0].name;
 
+  const searchIndex = new Map(models.map((m) => [
+    m.name,
+    `${m.name} ${(m.displayName ?? '').toLowerCase()}`.toLowerCase(),
+  ]));
+
   const choices = models.map((m) => {
     const rawLabel = m.displayName ?? m.name;
     const meta     = m.contextLength
       ? `${Math.round(m.contextLength / 1000)}k ctx`
       : m.size ? m.size : '';
-    const toolTag  = m.toolSupport ? chalk.hex('#10B981')('✓ tools') : chalk.dim('✗ tools');
-    const desc     = chalk.dim('  id: ') + chalk.bold(m.name)
-                   + (meta ? chalk.dim('  ·  ' + meta) : '')
-                   + '  ' + toolTag;
+    const toolTag  = m.toolSupport ? chalk.hex('#10B981')('✔ tools') : chalk.dim('✘ tools');
+    const desc     = chalk.dim('  ') + chalk.bold(m.name)
+                   + (meta ? chalk.dim('  ·  ') + chalk.hex('#94A3B8')(meta) : '')
+                   + '   ' + toolTag;
     return {
       name:        chalk.hex('#7C3AED').bold(rawLabel),
       value:       m.name,
       description: desc,
       short:       m.name,
-      _raw:        rawLabel.toLowerCase(),
     };
   });
 
   return search<string>({
-    message: 'Select a model  (type to filter)',
+    message: chalk.white.bold('Select a model') + chalk.dim('  ·  type to filter'),
     source: (input?: string) => {
       if (!input) return choices;
       const q = input.toLowerCase();
-      return choices.filter((c) => c.value.toLowerCase().includes(q) || c._raw.includes(q));
+      return choices.filter((c) => (searchIndex.get(c.value) ?? '').includes(q));
     },
     pageSize: 12,
   });

@@ -72,19 +72,19 @@ export function printBanner(version: string, model: string, cwd: string): void {
   const vscode   = detectVSCodeVersion();
 
   const art     = buildArt();
-  const cmdList = ['/help', '/models', '/tools', '/status', '/provider', '/model <name>', '/clear', '/history', '/exit']
-    .map((c) => theme.muted(c)).join('  ');
+  const cmdList = ['/model', '/provider', '/models', '/status', '/tools', '/help', '/exit']
+    .map((c) => chalk.hex('#7C3AED')(c)).join(chalk.dim('  ·  '));
 
   const lines = [
     art,
     '',
-    `  ${theme.label('Version')}  ${theme.muted('v' + version)}    ${chalk.dim(platform)}`,
-    `  ${theme.label('Model  ')}  ${theme.accent(model)}`,
-    `  ${theme.label('CWD    ')}  ${theme.path(cwd)}`,
-    `  ${theme.label('Time   ')}  ${chalk.dim(now)}    ${chalk.dim(mem)}`,
-    ...(vscode ? [`  ${theme.label('Editor ')}  ${chalk.dim(vscode)}`] : []),
+    `  ${chalk.dim('◆')} ${theme.label('Version')}   ${theme.accent('v' + version)}   ${chalk.dim(platform)}`,
+    `  ${chalk.dim('◈')} ${theme.label('Model  ')}   ${theme.accent(model)}`,
+    `  ${chalk.dim('◉')} ${theme.label('CWD    ')}   ${theme.path(cwd)}`,
+    `  ${chalk.dim('○')} ${theme.label('Time   ')}   ${chalk.dim(now)}   ${chalk.dim(mem)}`,
+    ...(vscode ? [`  ${chalk.dim('◎')} ${theme.label('Editor ')}   ${chalk.dim(vscode)}`] : []),
     '',
-    `  ${chalk.dim('Commands:')}  ${cmdList}`,
+    `  ${chalk.dim('Commands ·')}  ${cmdList}`,
   ];
 
   console.log(
@@ -103,8 +103,10 @@ export function printBanner(version: string, model: string, cwd: string): void {
 export function printCompactHeader(model: string, provider: string, turns: number): void {
   const cols = Math.min(process.stdout.columns ?? 80, 100);
   const sep  = chalk.dim('─'.repeat(cols));
-  const left = `  ${chalk.white.bold('KeepCode')}  ${chalk.dim('·')}  ${theme.accent(model)}  ${chalk.dim('·')}  ${theme.muted(provider)}`;
-  const right = chalk.dim(`${turns} turn${turns !== 1 ? 's' : ''}`);
+  const provIcons: Record<string, string> = { ollama: '○', openai: '◈', anthropic: '◆', gemini: '◉' };
+  const provIcon = provIcons[provider] ?? '◇';
+  const left  = `  ${chalk.white.bold('KeepCode')}  ${chalk.dim('·')}  ${theme.accent(model)}  ${chalk.dim('·')}  ${chalk.hex('#7C3AED')(provIcon + ' ' + provider)}`;
+  const right = chalk.dim(`${turns} turn${turns !== 1 ? 's' : ''}  ·  /help`);
   const pad   = Math.max(2, cols - stripAnsi(left).length - stripAnsi(right).length - 2);
   console.log(`\n${sep}\n${left}${' '.repeat(pad)}${right}\n${sep}`);
 }
