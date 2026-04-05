@@ -7,7 +7,7 @@ import { listRecentSessions } from './db/sync.js';
 import { addMCPServer, listMCPServers } from './mcp/manager.js';
 import type { AgentConfig } from './types/index.js';
 
-const PKG_VERSION = '1.4.0';
+const PKG_VERSION = '1.5.0';
 
 const program = new Command();
 
