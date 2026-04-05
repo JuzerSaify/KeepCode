@@ -32,7 +32,7 @@ registerTool({
       ? path.resolve(config.workingDir, String(args.dir))
       : config.workingDir;
 
-    const SKIP = new Set(['node_modules', '.git', 'dist', '__pycache__', '.venv', '.next', 'build', 'coverage', '.apex']);
+    const SKIP = new Set(['node_modules', '.git', 'dist', '__pycache__', '.venv', '.next', 'build', 'coverage', '.apex', '.keepcode']);
 
     const extMap = new Map<string, number>();
     const recentFiles: Array<{ path: string; mtime: number; size: number }> = [];

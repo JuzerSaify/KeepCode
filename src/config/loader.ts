@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { DEFAULT_CONFIG, APEX_DIR } from './defaults.js';
+import { DEFAULT_CONFIG, KEEPCODE_DIR } from './defaults.js';
 import type { AgentConfig } from '../types/index.js';
 
 interface ConfigFile {
@@ -15,11 +15,11 @@ interface ConfigFile {
 }
 
 /**
- * Loads .apex/config.json from the project root, merging with defaults.
+ * Loads .keepcode/config.json from the project root, merging with defaults.
  * CLI flags take precedence over config file values.
  */
 export async function loadConfig(workingDir: string): Promise<Partial<AgentConfig>> {
-  const configPath = path.join(workingDir, APEX_DIR, 'config.json');
+  const configPath = path.join(workingDir, KEEPCODE_DIR, 'config.json');
   try {
     const raw = await fs.readFile(configPath, 'utf8');
     const file = JSON.parse(raw) as ConfigFile;
@@ -39,10 +39,10 @@ export async function loadConfig(workingDir: string): Promise<Partial<AgentConfi
 }
 
 /**
- * Write the default config file to .apex/config.json if it doesn't exist.
+ * Write the default config file to .keepcode/config.json if it doesn't exist.
  */
 export async function initConfig(workingDir: string): Promise<void> {
-  const dir = path.join(workingDir, APEX_DIR);
+  const dir = path.join(workingDir, KEEPCODE_DIR);
   const configPath = path.join(dir, 'config.json');
   try {
     await fs.access(configPath);

@@ -135,7 +135,7 @@ export function taskPatternsSection(): string {
 ### PATTERN: Analyzing an Unfamiliar Codebase
 1. summarize_directory — get file counts, extension stats, recently modified
 2. list_directory depth=2 — understand project layout
-3. read_file the README or APEX.md/CLAUDE.md if present
+3. read_file the README or KEEPCODE.md/APEX.md/CLAUDE.md if present
 4. read_json("package.json") — inspect dependencies and scripts
 5. read_file the main entry point (index.ts / main.py / app.js)
 6. glob for test files: "**/*.test.ts" — check test coverage

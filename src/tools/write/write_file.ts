@@ -22,6 +22,11 @@ registerTool({
   },
   handler: async (args: Record<string, unknown>, config: AgentConfig) => {
     const filePath = path.resolve(config.workingDir, String(args.path));
+    // Path traversal guard: ensure resolved path is within working directory
+    const safeRoot = path.resolve(config.workingDir);
+    if (!filePath.startsWith(safeRoot + path.sep) && filePath !== safeRoot) {
+      return `Error: Path '${args.path}' escapes the working directory. Absolute paths and '..'-traversals outside '${safeRoot}' are not allowed.`;
+    }
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, String(args.content), 'utf8');
     const bytes = Buffer.byteLength(String(args.content), 'utf8');

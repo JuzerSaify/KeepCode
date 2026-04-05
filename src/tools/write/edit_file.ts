@@ -29,6 +29,11 @@ registerTool({
   },
   handler: async (args: Record<string, unknown>, config: AgentConfig) => {
     const filePath = path.resolve(config.workingDir, String(args.path));
+    // Path traversal guard
+    const safeRoot = path.resolve(config.workingDir);
+    if (!filePath.startsWith(safeRoot + path.sep) && filePath !== safeRoot) {
+      return `Error: Path '${args.path}' escapes the working directory. Access outside '${safeRoot}' is not allowed.`;
+    }
     const original = await fs.readFile(filePath, 'utf8');
     const oldStr = String(args.old_string);
     const newStr = String(args.new_string);

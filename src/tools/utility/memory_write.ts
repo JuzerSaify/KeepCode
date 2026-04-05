@@ -8,7 +8,7 @@ registerTool({
   definition: {
     name: 'memory_write',
     description:
-      'Write a note to persistent memory (.apex/memory.md). Use for: learned facts about the project, decisions made, patterns discovered, things to remember for future sessions.',
+      'Write a note to persistent memory (.keepcode/memory.md). Use for: learned facts about the project, decisions made, patterns discovered, things to remember for future sessions.',
     category: 'utility',
     dangerLevel: 'write',
     emoji: '📝',

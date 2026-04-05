@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command, Option } from 'commander';
-import { ApexSession } from './ui/session.js';
+import { KeepCodeSession } from './ui/session.js';
 import type { AgentConfig } from './types/index.js';
 
 const PKG_VERSION = '1.3.0';
@@ -42,7 +42,7 @@ program
       process.exit(0);
     });
 
-    const session = await ApexSession.create(flags);
+    const session = await KeepCodeSession.create(flags);
 
     if (opts.run) {
       // Non-interactive single-run mode

@@ -1,7 +1,7 @@
 import cliProgress, { type SingleBar } from 'cli-progress';
 import { theme } from '../theme.js';
 
-/** Thin wrapper around cli-progress for consistent Apex theming */
+/** Thin wrapper around cli-progress for consistent KeepCode theming */
 export class ProgressBar {
   private bar: SingleBar;
 

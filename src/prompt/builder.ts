@@ -59,8 +59,8 @@ async function detectProjectContext(workingDir: string): Promise<string> {
     }
   }
 
-  // APEX.md or README.md project notes
-  const contextFiles = ['APEX.md', 'AGENTS.md', 'CLAUDE.md', '.copilot-instructions.md'];
+  // KEEPCODE.md / APEX.md or README.md project notes
+  const contextFiles = ['KEEPCODE.md', 'APEX.md', 'AGENTS.md', 'CLAUDE.md', '.copilot-instructions.md'];
   for (const fn of contextFiles) {
     try {
       const content = await fs.readFile(path.join(workingDir, fn), 'utf8');

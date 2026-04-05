@@ -41,7 +41,7 @@ registerTool({
     const ext = args.ext ? String(args.ext).toLowerCase() : null;
     const max = Number(args.max ?? 500);
 
-    const SKIP = new Set(['node_modules', '.git', 'dist', '__pycache__', '.venv', '.next', 'build', 'coverage', '.apex']);
+    const SKIP = new Set(['node_modules', '.git', 'dist', '__pycache__', '.venv', '.next', 'build', 'coverage', '.apex', '.keepcode']);
     const results: string[] = [];
 
     async function walk(dir: string) {

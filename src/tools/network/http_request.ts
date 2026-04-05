@@ -39,13 +39,38 @@ registerTool({
   },
   handler: async (args: Record<string, unknown>, _config: AgentConfig) => {
     const url = String(args.url);
+
+    // SSRF guard: block requests to private/metadata IP ranges
+    try {
+      const parsed = new URL(url);
+      const hostname = parsed.hostname;
+      const PRIVATE = [
+        /^127\./,                        // loopback
+        /^10\./,                         // RFC1918
+        /^172\.(1[6-9]|2\d|3[01])\./,   // RFC1918
+        /^192\.168\./,                   // RFC1918
+        /^169\.254\./,                   // link-local / metadata (AWS, GCP, Azure)
+        /^::1$/,                         // IPv6 loopback
+        /^fc[0-9a-f]{2}:/i,              // IPv6 ULA
+        /^fd[0-9a-f]{2}:/i,              // IPv6 ULA
+        /^0\.0\.0\.0$/,                  // unspecified
+        /^metadata\.google\.internal$/,  // GCP metadata
+        /^169\.254\.169\.254$/,          // IMDS
+      ];
+      if (PRIVATE.some((r) => r.test(hostname))) {
+        return `SECURITY: Blocked request to private/internal address: ${hostname}`;
+      }
+    } catch {
+      return `Error: Invalid URL: ${url}`;
+    }
+
     const method = String(args.method ?? 'GET').toUpperCase();
     const userHeaders = (args.headers ?? {}) as Record<string, string>;
     const bodyStr = args.body ? String(args.body) : undefined;
     const timeout = Number(args.timeout_ms ?? 30_000);
 
     const headers: Record<string, string> = {
-      'User-Agent': 'Apex-AI-Agent/1.1',
+      'User-Agent': 'KeepCode-Agent/1.3',
       ...userHeaders,
     };
 

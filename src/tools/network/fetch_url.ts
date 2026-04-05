@@ -26,9 +26,21 @@ registerTool({
     const url = String(args.url);
     const headers = (args.headers ?? {}) as Record<string, string>;
 
+    // SSRF guard: block private/metadata IP ranges
+    try {
+      const parsed = new URL(url);
+      const h = parsed.hostname;
+      if (/^(127\.|10\.|192\.168\.|169\.254\.|0\.0\.0\.0$|::1$)/.test(h) ||
+          /^172\.(1[6-9]|2\d|3[01])\./.test(h)) {
+        return `SECURITY: Blocked request to private/internal address: ${h}`;
+      }
+    } catch {
+      return `Error: Invalid URL: ${url}`;
+    }
+
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'Apex-AI-Agent/1.0',
+        'User-Agent': 'KeepCode-Agent/1.3',
         ...headers,
       },
       signal: AbortSignal.timeout(30_000),

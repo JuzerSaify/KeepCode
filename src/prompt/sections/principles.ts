@@ -28,7 +28,7 @@ Never assume the structure of a codebase. Before making changes:
 - Run list_directory to understand project layout
 - Read the main entry point (index.ts, main.py, app.js, etc.)
 - Check package.json / requirements.txt / go.mod for dependencies
-- Read APEX.md, CLAUDE.md, or README.md if they exist
+- Read KEEPCODE.md, APEX.md, CLAUDE.md, or README.md if they exist
 - Run git_status to understand current state
 
 ### 2. READ BEFORE WRITING

@@ -12,15 +12,17 @@ export const DEFAULT_CONFIG: Omit<AgentConfig, 'sessionId'> = {
   verbose: false,
 };
 
-export const APEX_DIR = '.apex';
-export const MEMORY_FILE = '.apex/memory.md';
-export const TRAINING_FILE = '.apex/training/insights.json';
-export const CHECKPOINTS_DIR = '.apex/checkpoints';
-export const KNOWLEDGE_DIR = '.apex/knowledge';
+export const KEEPCODE_DIR = '.keepcode';
+/** @deprecated use KEEPCODE_DIR */
+export const APEX_DIR = KEEPCODE_DIR;
+export const MEMORY_FILE = '.keepcode/memory.md';
+export const TRAINING_FILE = '.keepcode/training/insights.json';
+export const CHECKPOINTS_DIR = '.keepcode/checkpoints';
+export const KNOWLEDGE_DIR = '.keepcode/knowledge';
 
 /** Max number of global insights to inject into each prompt */
 export const MAX_INJECTED_INSIGHTS = 6;
-/** Max bytes of a file Apex will read in one call */
+/** Max bytes of a file KeepCode will read in one call */
 export const MAX_FILE_READ_BYTES = 512 * 1024;
 /** Max bytes returned from fetch_url */
 export const MAX_FETCH_BYTES = 120 * 1024;

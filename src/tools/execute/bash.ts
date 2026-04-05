@@ -36,6 +36,20 @@ registerTool({
     const cwd = args.cwd ? String(args.cwd) : config.workingDir;
     const timeout = Math.min(Number(args.timeout_ms ?? BASH_TIMEOUT_MS), 300_000);
 
+    // Dangerous pattern detection — warn but do not block (agent is autonomous)
+    const DANGEROUS_PATTERNS = [
+      /:\(\)\s*\{.*\|.*&.*\}\s*;\s*:/,   // fork bomb
+      /rm\s+-[^-]*r[^-]*f\s+\/(?!\w)/,   // rm -rf /  (root)
+      /mkfs\b/,                            // format filesystem
+      /dd\s+.*of=\/dev\/(sd|hd|nvme)/,    // dd to block device
+      />(\s*)\/(dev|proc|sys)\//,          // redirect to kernel paths
+      /chmod\s+-[^-]*R[^-]*\s+777\s+\//,  // recursive world-write on /
+    ];
+    const flagged = DANGEROUS_PATTERNS.find((p) => p.test(command));
+    if (flagged) {
+      return `SECURITY WARNING: Command matches a dangerous pattern and was blocked.\nCommand: ${command}\nIf this is intentional, reformulate the command to be more targeted.`;
+    }
+
     // On Windows, prefer PowerShell for better Unicode and cmdlet support
     const isWindows = process.platform === 'win32';
     const shellOpts = isWindows

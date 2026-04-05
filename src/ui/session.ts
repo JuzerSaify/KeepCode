@@ -1,6 +1,6 @@
 import readline from 'readline';
 import crypto from 'crypto';
-import { ApexAgent } from '../agent/loop.js';
+import { KeepCodeAgent } from '../agent/loop.js';
 import { OllamaProvider } from '../providers/ollama/index.js';
 import { EventRenderer } from './renderer.js';
 import { printBanner } from './components/banner.js';
@@ -26,7 +26,7 @@ const COMMANDS: Record<string, string> = {
   '/exit':         'Exit KeepCode',
 };
 
-export class ApexSession {
+export class KeepCodeSession {
   private config: AgentConfig;
   private history: Message[] = [];
   private renderer = new EventRenderer();
@@ -39,7 +39,7 @@ export class ApexSession {
   /** One-shot: run a single task non-interactively then exit */
   async runTask(task: string): Promise<void> {
     const startMs = Date.now();
-    const agent = new ApexAgent(this.config);
+    const agent = new KeepCodeAgent(this.config);
     agent.on((e) => this.renderer.handle(e));
     const state = await agent.run(task, this.history);
     // Persist the user message + assistant result for conversational context
@@ -199,7 +199,7 @@ export class ApexSession {
   }
 
   /** Factory: build a session from CLI flags + file config + model picker */
-  static async create(flags: Partial<AgentConfig> & { autoModel?: boolean }): Promise<ApexSession> {
+  static async create(flags: Partial<AgentConfig> & { autoModel?: boolean }): Promise<KeepCodeSession> {
     const workingDir = flags.workingDir ?? process.cwd();
 
     // Ensure .apex dirs exist
@@ -256,6 +256,6 @@ export class ApexSession {
       sessionId: crypto.randomUUID(),
     };
 
-    return new ApexSession(config);
+    return new KeepCodeSession(config);
   }
 }

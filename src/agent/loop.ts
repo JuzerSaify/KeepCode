@@ -5,7 +5,7 @@ import { getToolDefinitions } from '../tools/registry.js';
 import { TASK_COMPLETE_SIGNAL } from '../tools/utility/task_complete.js';
 import { needsCompression, compressMessages, estimateTokens } from './compressor.js';
 import { recordRun, deriveInsights } from './trainer.js';
-import { initApexDirs } from './memory.js';
+import { initDirs } from './memory.js';
 import type {
   AgentConfig,
   AgentState,
@@ -15,7 +15,7 @@ import type {
   EventListener,
 } from '../types/index.js';
 
-export class ApexAgent {
+export class KeepCodeAgent {
   private listeners: EventListener[] = [];
   private abortRequested = false;
   private provider: OllamaProvider;
@@ -46,7 +46,7 @@ export class ApexAgent {
 
   async run(userTask: string, priorMessages: Message[] = []): Promise<AgentState> {
     this.abortRequested = false;
-    await initApexDirs(this.config.workingDir);
+    await initDirs(this.config.workingDir);
 
     const systemPrompt = await buildSystemPrompt(this.config, userTask);
     const tools = getToolDefinitions();

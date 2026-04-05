@@ -3,7 +3,7 @@ import path from 'path';
 import { MEMORY_FILE, TRAINING_FILE, KNOWLEDGE_DIR } from '../config/defaults.js';
 import type { AgentConfig, TrainingData } from '../types/index.js';
 
-/** Loads the .apex/memory.md for injection into the system prompt */
+/** Loads the .keepcode/memory.md for injection into the system prompt */
 export async function loadMemory(config: AgentConfig): Promise<string> {
   const memPath = path.join(config.workingDir, MEMORY_FILE);
   try {
@@ -42,7 +42,7 @@ export async function loadRelevantInsights(
   }
 }
 
-/** Load knowledge files from .apex/knowledge/ */
+/** Load knowledge files from .keepcode/knowledge/ */
 export async function loadKnowledge(config: AgentConfig): Promise<string> {
   const knowledgeDir = path.join(config.workingDir, KNOWLEDGE_DIR);
   try {
@@ -58,13 +58,13 @@ export async function loadKnowledge(config: AgentConfig): Promise<string> {
   }
 }
 
-/** Ensure all .apex directories exist */
-export async function initApexDirs(workingDir: string): Promise<void> {
+/** Ensure all .keepcode directories exist */
+export async function initDirs(workingDir: string): Promise<void> {
   const dirs = [
-    path.join(workingDir, '.apex'),
-    path.join(workingDir, '.apex/training'),
-    path.join(workingDir, '.apex/checkpoints'),
-    path.join(workingDir, '.apex/knowledge'),
+    path.join(workingDir, '.keepcode'),
+    path.join(workingDir, '.keepcode/training'),
+    path.join(workingDir, '.keepcode/checkpoints'),
+    path.join(workingDir, '.keepcode/knowledge'),
   ];
   for (const dir of dirs) {
     await fs.mkdir(dir, { recursive: true });
