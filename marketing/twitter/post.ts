@@ -204,7 +204,7 @@ async function selectThread(): Promise<Thread | null> {
       `  ${chalk.cyan(`[${i + 1}]`)} ${t.title}`
     );
     console.log(
-      chalk.dim(`       ${t.tweets.length} tweets · ${t.description}`)
+      chalk.dim(`       ${t.tweets.length} tweets · ${t.category}`)
     );
     console.log();
   });

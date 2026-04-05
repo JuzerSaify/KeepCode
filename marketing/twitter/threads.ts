@@ -1,441 +1,558 @@
-// All pre-written Twitter/X thread content for KeepCode CLI
-// Each thread has an id, title, and array of tweets.
-// mediaPath is optional — place screenshot PNGs in marketing/assets/ and reference them here.
-
 export interface Tweet {
   content: string;
-  mediaPath?: string; // relative to marketing/ directory, e.g. "assets/demo.png"
+  mediaPath?: string; // place PNGs in marketing/assets/ and ref as "assets/name.png"
 }
 
 export interface Thread {
   id: string;
   title: string;
-  description: string;
+  category: "launch" | "comparison" | "tutorial" | "hook" | "showcase";
   tweets: Tweet[];
 }
 
+// ─── CAMPAIGN SCHEDULE ───────────────────────────────────────────────────────
+// Day 1  09:00  launch          — main launch thread
+// Day 1  18:00  hook_cost       — standalone cost hook
+// Day 2  09:00  vs_claude       — comparison thread
+// Day 2  18:00  hook_copilot    — copilot hook
+// Day 3  09:00  free_local      — local Ollama setup thread
+// Day 3  18:00  hook_memory     — memory hook
+// Day 4  09:00  tools           — 40 tools showcase
+// Day 4  18:00  hook_agent      — autonomous agent hook
+// Day 5  09:00  reasoning       — thinking models thread
+// Day 5  18:00  hook_terminal   — terminal hook
+
+export const schedule = [
+  { day: 1, hour: 9,  threadId: "launch" },
+  { day: 1, hour: 18, threadId: "hook_cost" },
+  { day: 2, hour: 9,  threadId: "vs_claude" },
+  { day: 2, hour: 18, threadId: "hook_copilot" },
+  { day: 3, hour: 9,  threadId: "free_local" },
+  { day: 3, hour: 18, threadId: "hook_memory" },
+  { day: 4, hour: 9,  threadId: "tools" },
+  { day: 4, hour: 18, threadId: "hook_agent" },
+  { day: 5, hour: 9,  threadId: "reasoning" },
+  { day: 5, hour: 18, threadId: "hook_terminal" },
+];
+
+// ─── THREADS ─────────────────────────────────────────────────────────────────
+
 export const threads: Thread[] = [
-  // ─────────────────────────────────────────────────────────────────────────
+
+  // ── DAY 1 AM — LAUNCH ──────────────────────────────────────────────────────
   {
     id: "launch",
-    title: "🚀 Launch — What is KeepCode?",
-    description: "Main launch thread. Best for first post.",
+    title: "🚀 Launch Thread",
+    category: "launch",
     tweets: [
       {
-        content: `I've been building an autonomous AI coding agent for the past few months.
+        content: `I just shipped an autonomous AI coding agent.
 
-It reads your codebase, writes files, runs shell commands, calls APIs, commits git changes, and ships results — all from your terminal.
+It reads your code, writes files, runs tests, fixes errors, commits — all by itself.
 
-It's called KeepCode. And it's free. 🧵`,
+40 tools. 4 AI providers. Runs fully local with Ollama.
+
+The best part: it's completely free and open source.
+
+🧵 Here's what it can do:`,
         mediaPath: "assets/launch_hero.png",
       },
       {
-        content: `Most AI coding tools make you pay for every token.
+        content: `You give it one task in plain English.
 
-KeepCode works with Ollama — meaning you can run it completely locally, completely free, on models like qwen2.5-coder or deepseek-r1.
+It handles everything else:
+→ Reads the relevant files
+→ Plans the changes
+→ Edits code, adds tests
+→ Runs the tests, fixes failures
+→ Commits with a clean message
 
-No API key. No subscription. Your hardware.`,
+You watch. It ships.`,
+        mediaPath: "assets/cli_demo.png",
       },
       {
-        content: `But if you want cloud power, it supports that too:
+        content: `It works with every major AI provider:
 
-• OpenAI GPT-4o
-• Anthropic Claude Sonnet / Opus
-• Google Gemini 2.0 Flash
-• DeepSeek V3 / R1
-• kimi-k2-thinking (reasoning)
+🟣 Ollama — fully local, zero cost
+🟢 OpenAI — GPT-4o, o3
+🔵 Anthropic — Claude Sonnet / Opus
+🔴 Google — Gemini 2.0 Flash
+⚡ DeepSeek — R1, V3
 
-Same CLI. Same 40 tools. Switch with one command.`,
-      },
-      {
-        content: `40 built-in tools:
-
-📂 Read/write any file
-🔧 Run bash commands
-🌐 Fetch URLs & HTTP requests
-🔍 Search files with regex
-📝 Git diff, commit, log, status
-🧠 Persistent cross-session memory
-📌 Checkpoint & resume tasks
-
-The agent picks the right tool automatically.`,
-        mediaPath: "assets/tools_list.png",
+Same agent. Same 40 tools. Switch providers mid-session.`,
       },
       {
         content: `The CLI is built to feel premium.
 
-Streaming responses. Collapsing tool-call lines. Live spinner showing iteration count, token usage. Markdown rendered inline.
+◆ Live spinner shows: iteration count · tokens used · tool name
+◆ Tool calls collapse to single lines — no wall of JSON
+◆ Markdown rendered inline in terminal
+◆ Full diff viewer before every file write
 
-This is what your terminal deserves.`,
+This is what a terminal coding tool should feel like.`,
         mediaPath: "assets/cli_demo.png",
       },
       {
-        content: `Cloud sync is optional but powerful.
+        content: `Cross-session memory that actually works.
 
-Sign in with Google → your sessions and agent memory sync to the cloud via Supabase. Access from any machine. Resume exactly where you left off.
+The agent remembers:
+• Your codebase conventions
+• Past decisions and reasoning
+• Errors it already fixed
+• Your preferences
 
-keepcode login    # opens browser, done in 10s`,
+Start a new session. It picks up exactly where it left off.`,
       },
       {
-        content: `Install in 4 commands:
+        content: `Checkpoint & resume — a feature no other agent has.
+
+Hit a complex refactor? Checkpoint mid-task.
+Server crash? Resume from the exact point.
+Experiment and roll back? One command.
+
+keepcode checkpoint save "before-auth-refactor"`,
+      },
+      {
+        content: `MCP (Model Context Protocol) support built in.
+
+Connect your database, GitHub, Figma, or any MCP server.
+The agent gets those tools automatically. No code changes.
+
+keepcode mcp add github npx @modelcontextprotocol/server-github
+
+Now it can read issues, open PRs, review diffs.`,
+      },
+      {
+        content: `Install in under 2 minutes:
 
 git clone https://github.com/JuzerSaify/KeepCode
-cd KeepCode && npm install && npm run build && npm link
+cd KeepCode
+npm install && npm run build && npm link
 
-Then: keepcode
+keepcode
 
-That's it. Pick a model, type a task, watch it work.`,
-      },
-      {
-        content: `KeepCode v1.5.0 is live.
+That's it. Pick a model. Give it a task. Ship.
 
 → github.com/JuzerSaify/KeepCode
 
-Star it if you want to see where this goes. 
-
-RTs help more devs find a free alternative to $200/month agent tools. 🙏`,
+⭐ Star it if this is what you've been looking for.`,
       },
     ],
   },
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── DAY 1 PM — HOOK: COST ──────────────────────────────────────────────────
   {
-    id: "vs_claude_code",
-    title: "⚔️  KeepCode vs Claude Code",
-    description: "Direct comparison thread. High engagement potential.",
+    id: "hook_cost",
+    title: "💸 Hook: Cost Comparison",
+    category: "hook",
     tweets: [
       {
-        content: `Claude Code costs $17–$200/month depending on usage.
-KeepCode costs $0.
+        content: `The AI coding tool tax in 2026:
 
-Here's a direct feature comparison. (Not clickbait — actual facts.) 🧵`,
-      },
-      {
-        content: `Claude Code:
-❌ Claude models only
-❌ Anthropic API required
-❌ No offline mode
-❌ No MCP server support out of box
-❌ No checkpoint/resume
+Claude Code → Anthropic API costs
+Cursor Pro → $40/month
+GitHub Copilot → $19/month
+Devin → $500/month
 
-KeepCode:
-✅ 4 providers + local Ollama
-✅ Works offline with local models
-✅ MCP support built in
-✅ Checkpoint & resume any task`,
-      },
-      {
-        content: `Both support:
-✅ Autonomous multi-step tasks
-✅ File read/write
-✅ Shell commands
-✅ Git operations
-✅ Memory between sessions
+KeepCode → $0
 
-The difference is: KeepCode doesn't charge you for it.`,
-      },
-      {
-        content: `One thing Claude Code does better: deep Claude model integration.
-
-If you're already paying for Claude Max and love Claude — that makes sense for you.
-
-But if you want the same workflow without vendor lock-in, KeepCode runs any model you already have.`,
-      },
-      {
-        content: `Respect to the Anthropic team. Claude Code is genuinely good.
-
-We're not saying "ours is better." We're saying: you deserve a choice.
-
-A free, open-source option that does the same job.
+Open source. 40 tools. Runs local on Ollama.
 
 → github.com/JuzerSaify/KeepCode`,
       },
     ],
   },
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── DAY 2 AM — VS CLAUDE CODE ──────────────────────────────────────────────
   {
-    id: "free_local",
-    title: "🏠 Run AI Coding Agent for Free (Ollama)",
-    description: "Local Ollama setup — targets budget-conscious devs.",
+    id: "vs_claude",
+    title: "⚔️ KeepCode vs Claude Code",
+    category: "comparison",
     tweets: [
       {
-        content: `You don't need to pay $20–$200/month for an AI coding agent.
+        content: `Claude Code is excellent.
 
-Here's how to run one locally, free, right now. 🧵`,
+But it only runs Claude. Requires an Anthropic account. No offline mode. No checkpoint/resume. No MCP.
+
+KeepCode does all of that. And it's free.
+
+A direct breakdown: 🧵`,
       },
       {
-        content: `Step 1 — Install Ollama:
-→ ollama.com/download
+        content: `Provider flexibility:
 
-Step 2 — Pull a coding model:
-ollama pull qwen2.5-coder:7b
+Claude Code: Claude models only ❌
+KeepCode: Ollama · OpenAI · Anthropic · Gemini · DeepSeek ✅
 
-(7GB download. Runs on 8GB RAM.)`,
+If Anthropic has an outage, Claude Code is down.
+KeepCode switches to local Ollama in one command.
+
+/provider ollama`,
       },
       {
-        content: `Step 3 — Install KeepCode:
+        content: `Offline capability:
+
+Claude Code: requires internet, always ❌
+KeepCode: runs fully local with Ollama ✅
+
+Air-gapped machine? Private codebase? Slow connection?
+
+keepcode --provider ollama --model qwen2.5-coder:14b
+
+Zero data leaves your machine.`,
+      },
+      {
+        content: `Built-in tools:
+
+Claude Code: file ops, shell, basic git
+KeepCode: 40 tools including:
+→ Checkpoint & resume
+→ Persistent memory
+→ MCP server bridge
+→ HTTP client
+→ Regex replace
+→ Summarize directory
+→ Run & fix tests automatically`,
+      },
+      {
+        content: `Respect to Anthropic — Claude is the best model for coding.
+
+Point is: you should have a choice.
+
+A tool that matches Claude Code's workflow with any model.
+Free. Open source. No lock-in.
+
+→ github.com/JuzerSaify/KeepCode`,
+      },
+    ],
+  },
+
+  // ── DAY 2 PM — HOOK: COPILOT ───────────────────────────────────────────────
+  {
+    id: "hook_copilot",
+    title: "🤖 Hook: Copilot vs Agent",
+    category: "hook",
+    tweets: [
+      {
+        content: `Copilot autocompletes lines.
+
+KeepCode completes tasks.
+
+"Add OAuth to my Express app"
+
+It reads your routes, writes the middleware, updates the config, adds tests, runs them, fixes failures, commits.
+
+You typed one sentence.
+
+→ github.com/JuzerSaify/KeepCode`,
+      },
+    ],
+  },
+
+  // ── DAY 3 AM — FREE LOCAL SETUP ────────────────────────────────────────────
+  {
+    id: "free_local",
+    title: "🏠 Free Local Ollama Setup",
+    category: "tutorial",
+    tweets: [
+      {
+        content: `You can have a full autonomous AI coding agent on your machine for $0.
+
+Step by step — takes 5 minutes. 🧵`,
+      },
+      {
+        content: `Step 1 — Install Ollama
+
+→ ollama.com/download (Mac / Windows / Linux)
+
+It runs AI models locally. No cloud. No account. No API key.
+
+Open source. 45k GitHub stars.`,
+      },
+      {
+        content: `Step 2 — Pull a coding model
+
+ollama pull qwen2.5-coder:14b
+
+7B model: needs ~8GB RAM, runs on most laptops
+14B model: needs ~16GB RAM, noticeably smarter
+32B model: needs ~32GB RAM, very strong
+
+Start with 14B if you can.`,
+      },
+      {
+        content: `Step 3 — Install KeepCode
 
 git clone https://github.com/JuzerSaify/KeepCode
 cd KeepCode
-npm install && npm run build && npm link`,
+npm install
+npm run build
+npm link`,
       },
       {
-        content: `Step 4 — Run it:
+        content: `Step 4 — Run it
 
 keepcode
 
-Pick your model → type a task → it works.
+The model picker opens. Select your Ollama model.
+Type your task.
+Watch it work.
 
-No API key. No account. No rate limits. No monthly bill.`,
+No API key. No subscription. No rate limits.
+Your hardware. Your data. Your agent.`,
         mediaPath: "assets/local_demo.png",
       },
       {
         content: `What can a free local model actually do?
 
-I ran qwen2.5-coder:14b on a task: "add input validation to the login endpoint."
+I ran qwen2.5-coder:14b on a real task:
+"Refactor the database layer to use connection pooling"
 
-It read 3 files, wrote the validation logic, added tests, ran them, fixed one failure.
+→ Read 6 files
+→ Wrote the pool manager
+→ Updated 3 consumers
+→ Ran tests → 2 failures → fixed both
+→ Committed
 
-10 iterations. Done. Zero dollars.`,
+16 minutes. $0.
+
+Not as fast as GPT-4o. But for $0, it's remarkable.`,
       },
       {
-        content: `The catch: local models are slower and less capable than GPT-4o or Claude.
+        content: `When should you use cloud models instead?
 
-For simple-to-medium tasks they're surprisingly good. For complex reasoning tasks, use a cloud model.
+Complex architecture decisions → GPT-4o or Claude
+Reasoning-heavy refactors → DeepSeek-R1
+Maximum speed + quality → Claude Sonnet
 
-KeepCode lets you switch with one command: /provider openai`,
-      },
-      {
-        content: `Want the best of both?
+KeepCode lets you switch with one command:
+/provider anthropic
 
-Start with Ollama locally. When you hit a hard task, switch to Claude or GPT-4o for that one session. Switch back.
-
-You pay for the hard stuff only.
-
-That's how I use it.`,
-      },
-    ],
-  },
-
-  // ─────────────────────────────────────────────────────────────────────────
-  {
-    id: "reasoning_models",
-    title: "🧠 Reasoning Models in Your Terminal",
-    description: "Shows kimi-k2-thinking and deep reasoning capability.",
-    tweets: [
-      {
-        content: `Reasoning models (DeepSeek-R1, kimi-k2-thinking) are genuinely different.
-
-They think before they answer. You can watch the reasoning chain in real time.
-
-KeepCode supports them natively. Here's what that looks like. 🧵`,
-        mediaPath: "assets/thinking_model.png",
-      },
-      {
-        content: `I gave kimi-k2-thinking a hard task: refactor the auth module to support multiple providers.
-
-It spent 40 seconds thinking. I watched it reason through edge cases I hadn't considered.
-
-Then it wrote the code. First attempt passed tests.`,
-      },
-      {
-        content: `How it works in KeepCode:
-
-keepcode --provider openai --model kimi-k2-thinking:cloud
-
-The <think> reasoning blocks are buffered — you see a clean live spinner while it thinks, then the response appears fully formatted.
-
-No noise. Just the result.`,
-        mediaPath: "assets/thinking_spinner.png",
-      },
-      {
-        content: `Supported reasoning models:
-
-• kimi-k2-thinking (via OpenAI-compatible endpoint)
-• deepseek-r1:14b / :32b / :70b (local via Ollama)
-• deepseek-r1 (cloud via DeepSeek API)
-• Any reasoning model running on a local Ollama instance
-
-All work out of the box. No config changes.`,
-      },
-      {
-        content: `One thing I learned: reasoning models need more context window.
-
-KeepCode defaults to 32k tokens for this reason. The agent compresses history intelligently when context fills up.
-
-You shouldn't need to think about this — it just works.`,
+Pay for the hard stuff only. Free for the rest.`,
       },
     ],
   },
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── DAY 3 PM — HOOK: MEMORY ────────────────────────────────────────────────
   {
-    id: "tool_showcase",
-    title: "🔧 40 Tools — What the Agent Can Actually Do",
-    description: "Showcase of all built-in tools. Educational thread.",
+    id: "hook_memory",
+    title: "🧠 Hook: Persistent Memory",
+    category: "hook",
     tweets: [
       {
-        content: `KeepCode has 40 built-in tools the agent uses automatically.
+        content: `Every AI coding tool forgets you exist when the session ends.
 
-Most AI coding agents have ~5. Here's why 40 matters. 🧵`,
-      },
-      {
-        content: `File operations:
-• read_file — reads any file, any size
-• write_file / edit_file / patch_file
-• regex_replace — surgical text replacement
-• append_file / copy_file / move_file / delete_file
-• read_lines — read specific line ranges
-• read_json — load and query JSON`,
-      },
-      {
-        content: `Exploration tools:
-• list_files / list_directory / glob
-• search_files — regex search across codebase
-• summarize_directory — get the lay of the land fast
-• diff_files — compare two versions
+KeepCode has persistent cross-session memory.
 
-The agent uses these to understand your codebase before touching anything.`,
-      },
-      {
-        content: `Execution tools:
-• bash — run any shell command
-• node_eval — eval JavaScript inline
-• run_tests — runs your test suite and reads results
-• lint — runs eslint/tsc and reads errors
+It remembers:
+• Your naming conventions
+• The architectural decisions you made
+• The bugs it already fixed
+• Your preferences
 
-The agent runs tests, reads the output, and fixes failures automatically.`,
-      },
-      {
-        content: `Git tools:
-• git_status / git_diff / git_log
-• git_commit — stages and commits automatically
-• git_extras — stash, branch, checkout, rebase
-
-The agent can commit its own work. (You can turn this off with --no-auto-approve.)`,
-      },
-      {
-        content: `Network tools:
-• fetch_url — get any web page
-• http_request — full REST API calls with headers, body, auth
-
-Great for: pulling docs, hitting your own API, checking external endpoints during a task.`,
-      },
-      {
-        content: `Utility tools:
-• memory_read / memory_write — persistent notes across sessions
-• checkpoint — save and restore task state
-• think — structured reasoning step
-• plan — break tasks into subtasks
-• task_complete — signals completion cleanly
-• environment / process_info — inspect the runtime
-
-All of these. Free. Open source.`,
-      },
-    ],
-  },
-
-  // ─────────────────────────────────────────────────────────────────────────
-  {
-    id: "mcp_support",
-    title: "🔌 MCP Server Support",
-    description: "Model Context Protocol integration — targets power users.",
-    tweets: [
-      {
-        content: `MCP (Model Context Protocol) is becoming the standard way to give AI agents access to external tools.
-
-KeepCode supports it natively. Any MCP server's tools are automatically bridged into the agent.
-
-Here's how to set it up in 30 seconds. 🧵`,
-      },
-      {
-        content: `Add an MCP server:
-
-keepcode mcp add filesystem \\
-  npx @modelcontextprotocol/server-filesystem /path/to/dir
-
-That's it. The agent now has access to all tools that MCP server exposes.`,
-      },
-      {
-        content: `Add multiple servers:
-
-keepcode mcp add database npx @modelcontextprotocol/server-sqlite ./db.sqlite
-keepcode mcp add github npx @modelcontextprotocol/server-github
-
-List them: keepcode mcp list
-Remove: keepcode mcp remove github`,
-      },
-      {
-        content: `What this means in practice:
-
-• Connect your database — agent can read schema, run queries
-• Connect GitHub — agent can open PRs, read issues
-• Connect Figma — agent can read design tokens
-• Any tool you can wrap in MCP, the agent can use
-
-This is the long-term vision for AI tooling.`,
-      },
-      {
-        content: `KeepCode + MCP + local models = a private, extensible coding agent that connects to anything.
-
-No data leaves your machine unless you choose cloud models.
+Session 2 is noticeably smarter than session 1.
 
 → github.com/JuzerSaify/KeepCode`,
       },
     ],
   },
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── DAY 4 AM — 40 TOOLS ────────────────────────────────────────────────────
   {
-    id: "pain_points",
-    title: "😤 Pain Points Hook — Standalone Punchy Tweets",
-    description: "5 standalone hook tweets. Post individually, one per day.",
+    id: "tools",
+    title: "🔧 40 Tools Showcase",
+    category: "showcase",
     tweets: [
       {
-        content: `Every AI coding tool wants a subscription.
+        content: `Most AI agents have 5–10 tools and call it done.
 
-Claude Code: Anthropic account + API costs
-Cursor: $40/month Pro
-Copilot: $19/month
+KeepCode has 40.
 
-KeepCode: $0. Open source. Runs on your own Ollama models.
-
-github.com/JuzerSaify/KeepCode`,
+Here's why that number matters — and what the extra tools actually unlock. 🧵`,
       },
       {
-        content: `"Just write a script that reads these 5 files, refactors the logic, runs the tests, commits, and opens a PR."
+        content: `File tools (the basics done right):
 
-That's not a Copilot autocomplete job. That's an autonomous agent job.
+read_file · write_file · edit_file · patch_file
+regex_replace · append_file · copy_file
+move_file · delete_file
+read_lines (specific line ranges)
+read_json (load + query JSON)
 
-KeepCode does this. From your terminal. Free.`,
+edit_file understands diffs — it won't wipe a 500-line file to change 3 lines.`,
       },
       {
-        content: `I got tired of paying $20/month for tools that still ask me to explain what I want every session.
+        content: `Codebase exploration:
 
-KeepCode has persistent memory. It remembers your codebase, your preferences, your past decisions.
+list_files / list_directory / glob
+search_files — regex search across entire codebase
+summarize_directory — map of your project in one call
+diff_files — compare two versions of a file
 
-Ask it once. It remembers.`,
+The agent maps your codebase before touching anything.
+It doesn't guess. It knows.`,
       },
       {
-        content: `The best AI coding setup in 2026:
+        content: `Execution tools — this is where it gets powerful:
 
-1. KeepCode for autonomous tasks (free, local)
-2. Your editor for edits you make yourself
+bash — run any shell command
+run_tests — runs your test suite, reads results
+lint — runs eslint/tsc, reads errors
 
-You don't need Cursor. You don't need Claude Code.
+The loop:
+write code → run tests → read failures → fix → repeat
 
-You need a terminal and a good model.`,
+Fully autonomous. You set --auto-approve and come back.`,
+        mediaPath: "assets/test_loop.png",
       },
       {
-        content: `I asked KeepCode to add auth to my Express app.
+        content: `Git tools (the agent manages its own work):
 
-It read 8 files, wrote middleware, added JWT handling, updated routes, wrote tests, ran them, fixed 2 failures, committed.
+git_status / git_diff / git_log
+git_commit — stages, writes message, commits
+git_extras — branch, stash, checkout, rebase
 
-I watched. Didn't type a single line of code.
+The agent commits as it goes.
+Every logical step is a clean commit. Full history of its work.`,
+      },
+      {
+        content: `Network tools — underrated:
 
-Free. Local. Terminal. Done.`,
-        mediaPath: "assets/auth_task_output.png",
+fetch_url — get any web page (docs, APIs, READMEs)
+http_request — full REST calls with auth headers + body
+
+Real uses:
+• Read the library docs before using it
+• Hit your own API to test a new endpoint
+• Check an external service status during a task`,
+      },
+      {
+        content: `Memory & control tools:
+
+memory_read / memory_write — persist facts across sessions
+checkpoint — save and restore task state
+think — structured internal reasoning step
+plan — break complex tasks into subtasks
+task_complete — clean signal when done
+environment / process_info — know the runtime
+
+All 40. Free. Open source.
+
+→ github.com/JuzerSaify/KeepCode`,
+        mediaPath: "assets/tools_list.png",
+      },
+    ],
+  },
+
+  // ── DAY 4 PM — HOOK: AUTONOMOUS ────────────────────────────────────────────
+  {
+    id: "hook_agent",
+    title: "⚡ Hook: Autonomous Agent",
+    category: "hook",
+    tweets: [
+      {
+        content: `I typed one sentence last night:
+
+"Add rate limiting to every public API endpoint"
+
+Went to make coffee.
+
+Came back to:
+→ 12 files modified
+→ Redis middleware written
+→ Tests written and passing
+→ 4 commits with clean messages
+
+That's KeepCode.
+
+→ github.com/JuzerSaify/KeepCode`,
+      },
+    ],
+  },
+
+  // ── DAY 5 AM — REASONING MODELS ────────────────────────────────────────────
+  {
+    id: "reasoning",
+    title: "🧠 Reasoning Models in Your Terminal",
+    category: "showcase",
+    tweets: [
+      {
+        content: `Reasoning models (DeepSeek-R1, kimi-k2) think before they answer.
+
+Watching one work through a complex refactor in your terminal is genuinely impressive.
+
+KeepCode supports them natively. Here's what it looks like. 🧵`,
+        mediaPath: "assets/thinking_model.png",
+      },
+      {
+        content: `Regular models: token → token → token → answer
+
+Reasoning models: think for 30–90 seconds → answer
+
+The thinking is hidden from the UI. You see a clean spinner:
+
+◆ Thinking  [2/50]  ↑8k ↓2k
+
+Then the fully-formed response appears.
+
+No noise. Just better answers.`,
+        mediaPath: "assets/thinking_spinner.png",
+      },
+      {
+        content: `How to use a reasoning model with KeepCode:
+
+keepcode --provider openai --model kimi-k2-thinking:cloud
+
+or locally:
+
+ollama pull deepseek-r1:14b
+keepcode --model deepseek-r1:14b
+
+That's it. The agent handles the reasoning tokens automatically.`,
+      },
+      {
+        content: `Where reasoning models actually help:
+
+✅ Architecture decisions
+✅ Debugging complex race conditions
+✅ Refactors touching 20+ files
+✅ Security audits
+✅ Writing complex algorithms
+
+For simple CRUD tasks: stick with qwen2.5-coder. Faster, cheaper.
+
+Know when to use which. KeepCode lets you switch on demand.`,
+      },
+      {
+        content: `One thing I learned shipping this:
+
+Reasoning models need more context window.
+32k tokens minimum — or the agent compresses and forgets prior reads.
+
+KeepCode defaults to 32k context with intelligent history compression.
+
+You don't think about it. It just works.`,
+      },
+    ],
+  },
+
+  // ── DAY 5 PM — HOOK: TERMINAL ──────────────────────────────────────────────
+  {
+    id: "hook_terminal",
+    title: "💻 Hook: Terminal > IDE",
+    category: "hook",
+    tweets: [
+      {
+        content: `2026 and devs are still paying $40/month for a fancier text editor.
+
+The terminal is back.
+
+Run a full autonomous coding agent from your terminal.
+Any repo. Any language. Any machine. $0.
+
+keepcode --model qwen2.5-coder:14b --run "refactor auth module" --auto-approve
+
+→ github.com/JuzerSaify/KeepCode`,
       },
     ],
   },

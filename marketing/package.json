@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "post": "ts-node twitter/post.ts",
+    "campaign": "ts-node twitter/campaign.ts",
     "build": "tsc"
   },
   "dependencies": {
