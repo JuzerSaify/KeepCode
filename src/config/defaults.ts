@@ -6,7 +6,7 @@ export const DEFAULT_CONFIG: Omit<AgentConfig, 'sessionId'> = {
   apiBaseUrl: 'http://localhost:11434',
   temperature: 0.7,
   maxIterations: 50,
-  contextWindow: 16384,
+  contextWindow: 32768,
   maxTokens: 8192,
   workingDir: process.cwd(),
   autoApprove: false,

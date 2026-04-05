@@ -89,7 +89,7 @@ export class KeepCodeAgent {
       if (needsCompression(state.messages, this.config)) {
         const beforeTokens = estimateTokens(state.messages);
         this.emit({ type: 'status_change', status: 'compressing', message: 'Compressing context...' });
-        const { compressed } = compressMessages(state.messages, 10);
+        const { compressed } = compressMessages(state.messages, 16);
         state.messages = compressed;
         this.emit({
           type: 'compress',

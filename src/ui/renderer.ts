@@ -296,15 +296,10 @@ export class EventRenderer {
   }
 
   private onThought(content: string): void {
-    // Buffer the response — don't render yet.
-    // If a tool call follows, this is intermediate reasoning and will be discarded.
-    this.stopSpinner();
+    // Buffer the response — don't render yet and don't change visual state.
+    // If tool calls follow, the thought is intermediate reasoning and will be discarded.
+    // onComplete will render the final buffered thought.
     this.pendingThought = content.trim();
-    // Show a quiet spinner so the terminal doesn't go blank
-    this.startSpinner(
-      `${chalk.hex('#06B6D4')('◆')}  ${chalk.dim('Preparing response…')}`,
-      'cyan', 'dots12'
-    );
   }
 
   private onPlan(steps: string[]): void {
@@ -322,43 +317,40 @@ export class EventRenderer {
   }
 
   private onToolCall(name: string, args: Record<string, unknown>): void {
-    // Discard any buffered thought — it was intermediate reasoning before this tool call
+    // Discard any buffered intermediate thought — a new tool call starts a new action
     this.pendingThought = '';
-    this.stopSpinner();
-    this.flushStream();
     this.lastStatus    = '';
     this.toolStartMs   = Date.now();
     this.pendingToolName = name;
     this.pendingToolArgs = args;
-
-    const arg  = this.formatToolArg(name, args);
-    const text = `${chalk.hex('#F59E0B')('⚙')}  ${chalk.white.bold(name)}${arg ? `  ${chalk.dim(arg)}` : ''}`;
-    this.startSpinner(`  ${text}`, 'yellow', 'dots8Bit');
+    // No per-tool spinner — the status spinner ('Tools') is already showing
   }
 
   private onToolResult(name: string, output: string, error?: boolean): void {
     const ms = this.elapsedMs(this.toolStartMs);
-    this.stopSpinner();
 
-    const arg      = this.formatToolArg(this.pendingToolName, this.pendingToolArgs);
-    const nameStr  = chalk.white(name);
-    const argStr   = arg ? chalk.dim(`  ${arg}`) : '';
-    const msStr    = chalk.dim(`  ${ms}`);
+    // Clear the current spinner line so the result prints cleanly below it.
+    // The spinner resumes on the next animation frame one line lower.
+    if (this.spinner?.isSpinning) {
+      this.spinner.clear();
+    }
+
+    const arg     = this.formatToolArg(this.pendingToolName, this.pendingToolArgs);
+    const argStr  = arg ? chalk.dim(`  ${arg}`) : '';
+    const msStr   = chalk.dim(`  ${ms}`);
 
     if (error) {
       const safe      = (output ?? '').trim();
       const firstLine = safe.split('\n')[0].slice(0, 160);
-      console.log(`  ${chalk.hex('#EF4444')('⚙')}  ${nameStr}${argStr}  ${chalk.hex('#EF4444')('✗')}${msStr}`);
-      if (firstLine) {
-        console.log(`     ${chalk.hex('#EF4444').dim(firstLine)}`);
-      }
-      const rest = safe.split('\n').slice(1, 8);
-      for (const l of rest) {
-        if (l.trim()) console.log(`     ${chalk.hex('#EF4444').dim(l.slice(0, 160))}`);
+      process.stdout.write(`  ${chalk.hex('#EF4444')('⚙')}  ${chalk.white(name)}${argStr}  ${chalk.hex('#EF4444')('✗')}${msStr}\n`);
+      if (firstLine) process.stdout.write(`     ${chalk.hex('#EF4444').dim(firstLine)}\n`);
+      for (const l of safe.split('\n').slice(1, 6)) {
+        if (l.trim()) process.stdout.write(`     ${chalk.hex('#EF4444').dim(l.slice(0, 160))}\n`);
       }
     } else {
-      console.log(`  ${chalk.hex('#F59E0B')('⚙')}  ${nameStr}${argStr}  ${chalk.hex('#10B981')('✓')}${msStr}`);
+      process.stdout.write(`  ${chalk.hex('#F59E0B')('⚙')}  ${chalk.white(name)}${argStr}  ${chalk.hex('#10B981')('✓')}${msStr}\n`);
     }
+    // Spinner resumes naturally on next animation frame, below the printed line
   }
 
   private onCompress(from: number, to: number): void {
@@ -377,11 +369,13 @@ export class EventRenderer {
     this.flushStream();
     this.pendingThought = '';
     this.lastStatus = '';
-    const color = recoverable ? '#F59E0B' : '#EF4444';
-    const label = recoverable ? '⚠  Warning' : '✗  Error';
+    const color    = recoverable ? '#F59E0B' : '#EF4444';
+    const label    = recoverable ? '⚠  Warning' : '✗  Error';
+    // Collapse newlines so boxen borders don't break
+    const safeMsg  = message.replace(/\n+/g, '  ').replace(/\s{3,}/g, '  ').slice(0, 500);
     console.log(
       '\n' +
-      boxen(`  ${chalk.hex(color)(message)}`, {
+      boxen(`  ${chalk.hex(color)(safeMsg)}`, {
         padding: { top: 0, bottom: 0, left: 1, right: 1 },
         borderStyle: 'round',
         borderColor: color,
