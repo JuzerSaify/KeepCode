@@ -1,32 +1,53 @@
-﻿# KeepCode
+﻿<div align="center">
 
-**KeepCode** is a fully autonomous AI coding agent that runs entirely **locally via Ollama** — no API keys, no cloud, no usage limits. Give it a task; it plans, explores your codebase, edits files, runs commands, calls APIs, and ships a result.
+# KeepCode
 
-[![npm](https://img.shields.io/npm/v/keepcode?color=blueviolet)](https://www.npmjs.com/package/keepcode)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-brightgreen)](https://nodejs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
-[![Ollama](https://img.shields.io/badge/Powered%20by-Ollama-black)](https://ollama.com)
+**Autonomous AI coding agent · runs locally or in the cloud · no vendor lock-in**
+
+[![npm](https://img.shields.io/npm/v/keepcode?color=7C3AED&label=npm&style=flat-square)](https://www.npmjs.com/package/keepcode)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square&logo=node.js)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-F59E0B?style=flat-square)](LICENSE)
+[![Ollama](https://img.shields.io/badge/Ollama-local%20AI-black?style=flat-square)](https://ollama.com)
+[![Providers](https://img.shields.io/badge/Providers-OpenAI%20·%20Anthropic%20·%20Gemini%20·%20Ollama-blueviolet?style=flat-square)](#multi-provider-support)
+
+</div>
+
+---
+
+Give KeepCode a task — it **plans**, explores your codebase, edits files, runs shell commands, calls APIs, and ships a result. All from your terminal.
+
+- **40 built-in tools** — read, write, shell, git, network, code-quality, memory, checkpoints
+- **Multi-provider** — OpenAI GPT-4o, Anthropic Claude, Google Gemini, Ollama (fully local)
+- **Cloud sync** — sessions and memory backed up to Supabase; Google OAuth login
+- **MCP support** — connect any MCP server; tools bridged into the agent automatically
+- **Premium CLI** — full markdown rendering, sticky headers, VS Code detection
 
 ---
 
 ## Why KeepCode?
 
-| | KeepCode | Claude Code | Codex CLI | Aider |
-|---|---|---|---|---|
-| Local / offline | ✅ | ❌ | ❌ | ✅ (partial) |
-| Free to run | ✅ | ❌ API costs | ❌ OpenAI key | ✅ (partial) |
-| No account needed | ✅ | ❌ | ❌ | ✅ |
-| 38 built-in tools | ✅ | limited | limited | limited |
-| TypeScript native | ✅ | Node | Rust | Python |
+| | KeepCode | Claude Code | Codex CLI | Aider | Copilot |
+|---|:---:|:---:|:---:|:---:|:---:|
+| 🆓 Free to use | ✅ always | ❌ API costs | ❌ OpenAI key | ✅ w/ local | ✅ limited |
+| 🏠 Fully local / offline | ✅ | ❌ | ❌ | ✅ partial | ❌ |
+| 🔑 No account needed | ✅ | ❌ | ❌ | ✅ | ❌ |
+| 🔧 40 built-in tools | ✅ | partial | partial | partial | partial |
+| 🧠 Cross-session memory | ✅ | ✅ | ✅ | ⚠️ | ❌ |
+| 💾 Checkpoint & resume | ✅ | ❌ | ❌ | ❌ | ❌ |
+| 🔌 Multi-provider AI | ✅ 4 providers | ❌ Claude only | ❌ OpenAI only | ✅ | partial |
+| 🔒 Built-in security guards | ✅ | — | — | — | — |
+| 📦 TypeScript native | ✅ | Node.js | Rust | Python | — |
+
+> Full breakdown → [COMPARISON.md](COMPARISON.md)
 
 ---
 
 ## Install
 
 ```bash
-git clone https://github.com/JuzerSaify/apex
-cd apex
+git clone https://github.com/JuzerSaify/KeepCode
+cd KeepCode
 npm install
 npm run build
 npm link
@@ -61,24 +82,91 @@ keepcode --model qwen2.5-coder:14b --verbose --run "explain this codebase"
 
 ---
 
-## Options
+## CLI Reference
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-m, --model` | interactive | Ollama model name |
+| `-m, --model` | interactive | Model name (e.g. `qwen2.5-coder:7b`, `gpt-4o`, `claude-sonnet-4-5`) |
+| `--provider` | `ollama` | AI provider: `ollama` · `openai` · `anthropic` · `gemini` |
+| `--api-key` | env var | API key (auto-read from `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`) |
 | `-u, --url` | `http://localhost:11434` | Ollama base URL |
-| `-r, --run` | interactive | Single task, then exit |
-| `-y, --auto-approve` | `false` | Skip tool-call confirmation |
+| `-r, --run` | interactive | Task to execute, then exit |
+| `-y, --auto-approve` | `false` | Skip tool-call confirmation prompts |
 | `--verbose` | `false` | Stream tokens as they arrive |
-| `--auto-model` | `false` | Auto-pick best available model |
+| `--auto-model` | `false` | Auto-pick best available local model |
 | `-i, --iterations` | `50` | Max agent iterations per task |
-| `-c, --cwd` | `process.cwd()` | Working directory |
-| `--ctx` | `16384` | Context window size |
-| `--max-tokens` | `8192` | Max tokens per response |
+| `-c, --cwd` | `process.cwd()` | Working directory for all file operations |
+| `--ctx` | `16384` | Context window size (tokens) |
+| `--max-tokens` | `8192` | Max tokens per model response |
 
 ---
 
-## Tools (38 total)
+## REPL Commands
+
+Inside the interactive session:
+
+| Command | Description |
+|---------|-------------|
+| `/help` | Show all available commands |
+| `/models` | List available models for the current provider |
+| `/model <name>` | Switch to a different model mid-session |
+| `/provider [name]` | Show or switch AI provider |
+| `/tools` | List all 40 registered tools by category |
+| `/history` | Show conversation history summary |
+| `/sessions` | Show recent cloud sessions (requires login) |
+| `/status` | Show config, VS Code version, and session info |
+| `/whoami` | Show current logged-in user |
+| `/clear` | Clear conversation history |
+| `/exit` | Exit KeepCode |
+
+---
+
+## Multi-Provider Support
+
+```bash
+# Ollama — local, free, private
+keepcode --provider ollama --model qwen2.5-coder:14b
+
+# OpenAI
+OPENAI_API_KEY=sk-... keepcode --provider openai --model gpt-4o
+
+# Anthropic Claude
+ANTHROPIC_API_KEY=sk-ant-... keepcode --provider anthropic --model claude-sonnet-4-5
+
+# Google Gemini
+GEMINI_API_KEY=AI... keepcode --provider gemini --model gemini-2.0-flash
+```
+
+All providers share the same 40-tool interface, full markdown rendering, and cross-session memory.
+
+---
+
+## Cloud Sync & Auth
+
+```bash
+keepcode login      # Google OAuth — opens browser
+keepcode logout
+keepcode profile
+keepcode sessions   # List recent cloud sessions
+```
+
+When logged in, sessions and memory sync to Supabase — accessible from any machine.
+
+---
+
+## MCP Support
+
+```bash
+keepcode mcp add filesystem npx @modelcontextprotocol/server-filesystem /path/to/dir
+keepcode mcp add github npx @modelcontextprotocol/server-github
+keepcode mcp list
+```
+
+MCP tools appear as `serverName__toolName` in the agent's tool registry.
+
+---
+
+## Tools (40 total)
 
 ### Read
 | Tool | Description |
@@ -157,8 +245,8 @@ src/
   agent/        Core loop, memory, compression, trainer
   config/       Defaults and config loader (.keepcode/config.json)
   prompt/       System prompt builder + sections (identity, principles, tools_guide…)
-  providers/    Ollama HTTP client
-  tools/        All 38 tool implementations organised by category
+  providers/    Ollama · OpenAI · Anthropic · Gemini
+  tools/        All 40 tool implementations organised by category
   types/        TypeScript interfaces (AgentConfig, Message, ToolCall…)
   ui/           Terminal renderer, REPL, components (spinner, model picker, banner…)
 ```
@@ -215,153 +303,21 @@ KeepCode stores state in `.keepcode/` inside your project (gitignored by default
 ## Requirements
 
 - Node.js 18+
-- Ollama with at least one model pulled
+- For local models: **[Ollama](https://ollama.com)** with at least one model pulled (`ollama pull qwen2.5-coder:7b`)
+- For cloud models: API key for OpenAI / Anthropic / Gemini
 
 ---
 
 ## License
 
-MIT
+MIT — free forever, including commercial use.
 
+---
 
-## Install
+<div align="center">
 
-```bash
-git clone https://github.com/JuzerSaify/apex
-cd apex
-npm install
-npm run build
-npm link
-```
+⭐ **Star this repo if KeepCode saves you API costs** ⭐
 
-Requires [Ollama](https://ollama.com) running locally (or point `--url` at a remote instance).
+[COMPARISON.md](COMPARISON.md) · [CHANGELOG.md](CHANGELOG.md) · [Issues](https://github.com/JuzerSaify/KeepCode/issues)
 
-## Usage
-
-```bash
-# Interactive — pick your model, then type your task
-apex
-
-# Direct task
-apex --model qwen2.5-coder:7b --run "add input validation to the login endpoint"
-
-# Auto-approve all tool calls (no confirmation prompts)
-apex --model llama3.1:8b --run "fix the failing tests" --auto-approve
-
-# Point at a remote Ollama instance
-apex --model deepseek-r1:14b --url http://192.168.1.10:11434 --run "refactor auth module"
-```
-
-## Options
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--model`, `-m` | interactive | Ollama model to use |
-| `--url` | `http://localhost:11434` | Ollama base URL |
-| `--run`, `-r` | interactive | Task to execute non-interactively |
-| `--auto-approve` | false | Skip tool-call confirmation prompts |
-| `--verbose` | false | Stream tokens as they arrive |
-| `--max-iter` | 50 | Max agent iterations |
-| `--working-dir` | `cwd` | Root directory for all file operations |
-
-## Tools (38 total)
-
-### Read
-| Tool | Description |
-|------|-------------|
-| `read_file` | Read file with optional line range |
-| `read_lines` | Read multiple non-contiguous line ranges in one call |
-| `read_json` | Read JSON file with optional dot-path query |
-| `list_directory` | Tree view with depth control |
-| `list_files` | Flat recursive listing with extension filter |
-| `search_files` | Regex search across files |
-| `glob` | Pattern-match files (e.g. `**/*.test.ts`) |
-| `summarize_directory` | File count, extension breakdown, size, recently modified |
-
-### Write
-| Tool | Description |
-|------|-------------|
-| `edit_file` | Surgical find-and-replace (primary editing tool) |
-| `patch_file` | Apply multiple edits to one file atomically |
-| `write_file` | Full file write |
-| `append_file` | Append content to file |
-| `regex_replace` | Bulk regex-based replacement |
-| `write_json` | Write JSON or update a single key |
-| `create_directory` | Create nested directories |
-| `delete_file` | Delete a file |
-| `move_file` | Move or rename a file |
-| `copy_file` | Copy a file |
-
-### Execute
-| Tool | Description |
-|------|-------------|
-| `bash` | Run any shell command (120s timeout) |
-| `node_eval` | Evaluate a JavaScript snippet in-process |
-
-### Network
-| Tool | Description |
-|------|-------------|
-| `fetch_url` | GET a URL (docs, raw files, APIs) |
-| `http_request` | Full HTTP client: POST/PUT/PATCH/DELETE with headers + body |
-
-### Git
-| Tool | Description |
-|------|-------------|
-| `git_status` | Working tree status |
-| `git_diff` | Review changes |
-| `git_log` | Commit history |
-| `git_commit` | Stage and commit |
-| `git_stash` | Push/pop/list/apply/drop stash |
-| `git_branch` | List/create/switch/delete branches |
-| `git_pull` | Pull with optional rebase |
-
-### Code Quality
-| Tool | Description |
-|------|-------------|
-| `lint` | Run project linter |
-| `run_tests` | Run test suite with optional filter |
-
-### Utility
-| Tool | Description |
-|------|-------------|
-| `think` | Reason through a problem before acting |
-| `plan` | Display a structured execution plan |
-| `diff_files` | Unified diff between two files or file vs. string |
-| `environment` | Read env vars with secret redaction |
-| `process_info` | Check running processes and port usage |
-| `memory_write` | Persist project facts across sessions |
-| `memory_read` | Recall persisted facts |
-| `checkpoint` | Save/restore agent state |
-| `task_complete` | Signal verified task completion |
-
-## Project Layout
-
-```
-src/
-  agent/          # Core loop, memory, compression, trainer
-  config/         # Defaults and config loader
-  prompt/         # System prompt builder and sections
-  providers/      # Ollama HTTP client
-  tools/          # All 38 tool implementations
-  types/          # TypeScript interfaces
-  ui/             # Terminal renderer and components
-```
-
-## How It Works
-
-1. **Plans** — calls `plan` at the start of multi-step tasks to show its approach
-2. **Explores** — reads files, searches code, inspects environment with `summarize_directory`
-3. **Acts** — writes files with `patch_file`/`edit_file`, runs commands via `bash`, calls APIs with `http_request`
-4. **Verifies** — re-reads files, runs tests, diffs before/after with `diff_files`
-5. **Completes** — calls `task_complete` only after verification passes
-
-The agent stores learnings in `.apex/` — memory, training insights, and checkpoints persist across sessions.
-
-## Requirements
-
-- Node.js 18+
-- Ollama with at least one model pulled (`ollama pull qwen2.5-coder:7b`)
-
-## License
-
-MIT
+</div>

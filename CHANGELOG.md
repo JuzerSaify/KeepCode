@@ -4,6 +4,36 @@ All notable changes to KeepCode are documented here.
 
 ---
 
+## [v1.5.0] — 2026-04-05
+
+### CLI UI Overhaul
+
+- **White ASCII art** — KEEP and CODE banner blocks use `chalk.white.bold` / `chalk.white`; box border changed from purple to white
+- **Full markdown renderer** — new `renderMd()` handles H1–H4 headings, fenced code blocks with `╭──lang──╮` box art, markdown tables with `│` separators, nested lists (●/○/▪), blockquotes (`▎`), horizontal rules, and inline **bold**/*italic*/`code`
+- **White token stream** — streaming tokens render in `chalk.white` (was gray `theme.muted`) for high-contrast readability
+- **Thought rendering** — `onThought` now calls `renderMd()` instead of a gray per-line loop
+- **Complete tool output** — `onToolResult` expanded from 10 → **60 lines** shown and 130 → **300 chars** per line
+- **No summary truncation** — `onComplete` removed the 800-char hard cut; full markdown-rendered task summary always shown
+- **Sticky compact header** — `printCompactHeader()` prints model · provider · turn count after every agent response
+- **Tool arg preview** — expanded from 110 → 300 chars with multi-line context hint
+
+### VS Code Detection
+
+- `detectVSCodeVersion()` exported from `src/ui/components/banner.ts`
+- Checks `TERM_PROGRAM=vscode` env var first; falls back to `code --version` CLI with 2 s timeout
+- VS Code version displayed as a row in the `/status` REPL command
+
+### Supabase Diagnostics
+
+- `checkSupabaseConnection()` added to `src/db/sync.ts`
+- Returns `{ connected, authenticated, latencyMs, error? }` — useful for debugging cloud sync issues
+
+### Package
+
+- `package.json` version: `1.4.0` → `1.5.0`
+
+---
+
 ## [v1.4.0] — 2026-04-10
 
 ### Multi-Provider AI Support

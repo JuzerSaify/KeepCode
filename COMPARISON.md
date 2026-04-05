@@ -1,6 +1,6 @@
 # KeepCode vs. Agentic CLI Coding Tools
 
-> Research date: April 5, 2026 · KeepCode v1.3.0
+> Research date: April 5, 2026 · KeepCode v1.5.0
 
 This document compares KeepCode against five real, actively-maintained agentic coding tools.
 All data is sourced from official documentation, GitHub repositories, and published pricing pages.
@@ -10,15 +10,17 @@ All data is sourced from official documentation, GitHub repositories, and publis
 ## The Competitors
 
 ### KeepCode (this project)
-- **Repo**: [github.com/JuzerSaify/apex](https://github.com/JuzerSaify/apex)
+- **Repo**: [github.com/JuzerSaify/KeepCode](https://github.com/JuzerSaify/KeepCode)
 - **Runtime**: Node.js 18 + TypeScript
 - **Install**: `git clone … && npm install && npm run build && npm link`
-- **Backend**: Ollama (100% local inference)
-- **Auth**: None required
-- **Cost**: Free forever (compute = your own hardware)
-- **38 built-in tools**: read/write/bash/git/network/utility/code-quality
-- **Memory**: `.keepcode/memory.md` persists facts across sessions
+- **Backend**: Ollama (local) · OpenAI · Anthropic · Google Gemini — switch with `--provider`
+- **Auth**: None for local; optional Google OAuth for Supabase cloud sync
+- **Cost**: Free forever with local models; pay only for cloud API usage if used
+- **40 built-in tools**: read/write/bash/git/network/utility/code-quality/memory/checkpoints
+- **Memory**: `.keepcode/memory.md` persists facts across sessions; syncs to Supabase cloud
 - **Local models**: Any model Ollama supports (Qwen, DeepSeek, Llama, Mistral, CodeLlama…)
+- **MCP**: Connect any MCP server; tools bridged into agent registry as `server__toolName`
+- **New in v1.5.0**: Full markdown renderer, sticky compact headers, VS Code detection, 60-line tool output, Supabase diagnostics
 
 ### Claude Code (Anthropic)
 - **Site**: [code.claude.com](https://code.claude.com)
@@ -97,7 +99,7 @@ All data is sourced from official documentation, GitHub repositories, and publis
 | **VS Code integration** | ❌ | ✅ | ✅ | ⚠️ watch mode | ✅ | ✅ |
 | **Git-aware (auto-commit)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Cross-session memory** | ✅ `.keepcode/` | ✅ `CLAUDE.md` | ✅ `AGENTS.md` | ⚠️ partial | ❌ | ❌ |
-| **38+ built-in tools** | ✅ | ✅ | partial | partial | partial | partial |
+| **40+ built-in tools** | ✅ | ✅ | partial | partial | partial | partial |
 | **SSRF / path-traversal guard** | ✅ | N/A | N/A | N/A | N/A | N/A |
 | **Multi-agent parallel runs** | ❌ | ❌ | ❌ | ❌ | ⚠️ (2026 roadmap) | ✅ |
 | **Voice-to-code** | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
@@ -157,26 +159,10 @@ All data is sourced from official documentation, GitHub repositories, and publis
 |------|-------|----------|---------|
 | openai/codex | ~73 k | Rust + TS | Apache-2.0 |
 | Aider-AI/aider | ~43 k | Python | Apache-2.0 |
-| JuzerSaify/apex _(KeepCode)_ | growing | TypeScript | MIT |
+| [JuzerSaify/KeepCode](https://github.com/JuzerSaify/KeepCode) | growing ⭐ | TypeScript | MIT |
 
 _Claude Code and Blackbox AI are closed-source products; GitHub star counts do not apply._
 _GitHub Copilot is a product, not an open-source repository._
-
-| **Runs fully locally** | ✅ | ❌ | ❌ | ⚠ partial | ⚠ partial |
-| **No API key required** | ✅ | ❌ | ❌ | ⚠ optional | ⚠ optional |
-| **Open source** | ✅ MIT | ❌ | ✅ | ✅ | ✅ |
-| **Built-in memory system** | ✅ | ✅ | ❌ | ⚠ basic | ❌ |
-| **Tool / function calling** | ✅ 38 tools | ✅ | ✅ | ⚠ limited | ✅ |
-| **Shell execution (bash/pwsh)** | ✅ cross-OS | ✅ | ✅ | ✅ | ❌ |
-| **Git integration** | ✅ 7 tools | ✅ | ⚠ basic | ✅ | ⚠ basic |
-| **Context compression** | ✅ auto | ✅ | ❌ | ⚠ manual | ❌ |
-| **Multi-file editing** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Premium CLI UI** | ✅ | ✅ | ⚠ basic | ⚠ basic | ❌ (IDE) |
-| **Checkpoint / resume** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Cost per 1M tokens** | **$0** (local) | ~$15 (Sonnet) | ~$10 (GPT-4o) | varies | varies |
-| **Model agnostic** | ✅ any Ollama | ❌ Claude only | ❌ OpenAI only | ✅ | ✅ |
-| **Offline capable** | ✅ | ❌ | ❌ | ⚠ | ⚠ |
-| **Self-training / insights** | ✅ | ❌ | ❌ | ❌ | ❌ |
 
 ---
 
@@ -223,4 +209,4 @@ All tests run under identical timeout (5 min), identical context window (16 k to
 
 ---
 
-*KeepCode is free and open source. Star it on GitHub → [JuzerSaify/apex](https://github.com/JuzerSaify/apex)*
+*KeepCode is free and open source. Star it on GitHub → [JuzerSaify/KeepCode](https://github.com/JuzerSaify/KeepCode)*
