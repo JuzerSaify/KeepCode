@@ -169,35 +169,38 @@ function renderMd(content: string, indent = '  '): void {
   flushTable();
 }
 export class EventRenderer {
-  private tokenBuffer = '';
-  private inStream = false;
-  private lastStatus = '';
+  private tokenBuffer   = '';
+  private inStream      = false;
+  private lastStatus    = '';
   private spinner: Ora | null = null;
   private spinnerBaseText = '';
-  private toolStartMs = 0;
-  private runStartMs = Date.now();
-  private curIter = 0;
-  private maxIter = 0;
-  private totalIn  = 0;
-  private totalOut = 0;
-  /** Track last thought content to avoid repeating it in the complete box */
-  private lastThoughtContent = '';
+  private toolStartMs   = 0;
+  private runStartMs    = Date.now();
+  private curIter       = 0;
+  private maxIter       = 0;
+  private totalIn       = 0;
+  private totalOut      = 0;
+  /** Buffered thought — held until onComplete or discarded if tool calls follow */
+  private pendingThought = '';
+  /** Stored tool info for result display */
+  private pendingToolName = '';
+  private pendingToolArgs: Record<string, unknown> = {};
 
   handle(event: AgentEvent): void {
     switch (event.type) {
-      case 'status_change':   this.onStatus(event.status, event.message); break;
-      case 'token':           this.onToken(event.token); break;
-      case 'thought':         this.onThought(event.content); break;
-      case 'plan':            this.onPlan(event.steps); break;
-      case 'tool_call':       this.onToolCall(event.call.name, event.call.arguments); break;
-      case 'tool_result':     this.onToolResult(event.result.name, event.result.output, event.result.error); break;
-      case 'compress':        this.onCompress(event.fromTokens, event.toTokens); break;
-      case 'error':           this.onError(event.message, event.recoverable); break;
-      case 'complete':        this.onComplete(event.summary, event.state.iterations, event.state.toolCallCount, event.state.tokenCount, event.state.inputTokenCount); break;
-      case 'abort':           this.onAbort(); break;
-      case 'iteration_start': this.onIteration(event.iteration, event.maxIterations); break;
-      case 'token_usage':     this.onTokenUsage(event.totalInputTokens, event.totalOutputTokens); break;
-      case 'training_insight':this.onInsight(event.insight); break;
+      case 'status_change':    this.onStatus(event.status, event.message); break;
+      case 'token':            this.onToken(event.token); break;
+      case 'thought':          this.onThought(event.content); break;
+      case 'plan':             this.onPlan(event.steps); break;
+      case 'tool_call':        this.onToolCall(event.call.name, event.call.arguments); break;
+      case 'tool_result':      this.onToolResult(event.result.name, event.result.output, event.result.error); break;
+      case 'compress':         this.onCompress(event.fromTokens, event.toTokens); break;
+      case 'error':            this.onError(event.message, event.recoverable); break;
+      case 'complete':         this.onComplete(event.summary, event.state.iterations, event.state.toolCallCount, event.state.tokenCount, event.state.inputTokenCount); break;
+      case 'abort':            this.onAbort(); break;
+      case 'iteration_start':  this.onIteration(event.iteration, event.maxIterations); break;
+      case 'token_usage':      this.onTokenUsage(event.totalInputTokens, event.totalOutputTokens); break;
+      case 'training_insight': this.onInsight(event.insight); break;
     }
   }
 
@@ -228,6 +231,51 @@ export class EventRenderer {
     return d < 1000 ? `${d}ms` : `${(d / 1000).toFixed(1)}s`;
   }
 
+  /**
+   * Extract a compact preview string from tool arguments.
+   * Shows the single most relevant argument — file path, command, URL, etc.
+   */
+  private formatToolArg(name: string, args: Record<string, unknown>): string {
+    const MAX  = 52;
+    const str  = (v: unknown): string => String(v ?? '').trim();
+    const tr   = (s: string): string  => s.length > MAX ? s.slice(0, MAX) + '…' : s;
+    switch (name) {
+      case 'read_file': case 'write_file': case 'edit_file': case 'patch_file':
+      case 'delete_file': case 'copy_file': case 'move_file': case 'append_file':
+      case 'regex_replace': case 'read_json': case 'write_json': case 'read_lines':
+      case 'diff_files':
+        return tr(str(args.path ?? args.source ?? ''));
+      case 'bash':
+        return tr(str(args.command ?? '').split('\n')[0]);
+      case 'node_eval':
+        return tr(str(args.code ?? '').split('\n')[0]);
+      case 'list_directory': case 'summarize_directory':
+        return tr(str(args.path ?? args.directory ?? '.'));
+      case 'list_files': case 'glob':
+        return tr(str(args.pattern ?? args.glob ?? ''));
+      case 'search_files':
+        return tr(str(args.pattern ?? args.query ?? args.regex ?? ''));
+      case 'fetch_url': case 'http_request':
+        return tr(str(args.url ?? ''));
+      case 'git_commit':
+        return tr(str(args.message ?? ''));
+      case 'git_diff': case 'git_log':
+        return tr(str(args.path ?? args.ref ?? args.branch ?? ''));
+      case 'memory_read': case 'memory_write':
+        return tr(str(args.key ?? args.path ?? ''));
+      case 'think':
+        return tr(str(args.thought ?? '').split('\n')[0]);
+      case 'plan':
+        return tr(str(args.title ?? args.goal ?? ''));
+      case 'task_complete':
+        return '';
+      default: {
+        const first = Object.values(args)[0];
+        return first ? tr(str(first).split('\n')[0]) : '';
+      }
+    }
+  }
+
   private onStatus(status: string, message?: string): void {
     this.flushStream();
     const key = `${status}:${message ?? ''}`;
@@ -236,102 +284,80 @@ export class EventRenderer {
 
     const cfg  = STATUS_CFG[status] ?? { icon: '◆', label: status, color: theme.muted, spin: 'white' as SpinColor, spinner: 'dots2' };
     const hint = message ?? STATUS_HINTS[status] ?? '';
-    const iter = this.maxIter > 0 ? theme.dim(`  [${this.curIter}/${this.maxIter}]`) : '';
-    const text = `${cfg.color(`${cfg.icon}  ${cfg.label.toUpperCase()}`)}${iter}  ${theme.dim(hint)}`;
+    const iter = this.maxIter > 0 ? chalk.dim(`  [${this.curIter}/${this.maxIter}]`) : '';
+    const text = `${cfg.color(`${cfg.icon}  ${cfg.label}`)}${iter}${hint ? `  ${chalk.dim(hint)}` : ''}`;
 
     this.startSpinner(text, cfg.spin, cfg.spinner);
   }
 
   private onToken(token: string): void {
-    this.stopSpinner();
-    if (!this.inStream) {
-      const cols = Math.min(process.stdout.columns ?? 80, 100);
-      const sep  = chalk.dim('─'.repeat(Math.max(2, cols - 24)));
-      process.stdout.write(`\n  ${chalk.hex('#06B6D4').bold('▸  Streaming')}  ${sep}\n  `);
-      this.inStream = true;
-    }
-    process.stdout.write(chalk.white(token));
+    // Buffer silently — full content surfaces via onThought / onComplete
     this.tokenBuffer += token;
   }
 
   private onThought(content: string): void {
+    // Buffer the response — don't render yet.
+    // If a tool call follows, this is intermediate reasoning and will be discarded.
     this.stopSpinner();
-    this.flushStream();
-    this.lastStatus = '';
-    this.lastThoughtContent = content.trim();
-    const cols = Math.min(process.stdout.columns ?? 80, 100);
-    console.log(`\n  ${chalk.hex('#06B6D4').bold('\u25c6  Response')}  ${chalk.dim('\u2500'.repeat(Math.max(2, cols - 18)))}`);
-    renderMd(content);
+    this.pendingThought = content.trim();
+    // Show a quiet spinner so the terminal doesn't go blank
+    this.startSpinner(
+      `${chalk.hex('#06B6D4')('◆')}  ${chalk.dim('Preparing response…')}`,
+      'cyan', 'dots12'
+    );
   }
 
   private onPlan(steps: string[]): void {
     this.stopSpinner();
     this.flushStream();
+    this.pendingThought = '';
     this.lastStatus = '';
+    if (steps.length === 0) return;
     const cols = Math.min(process.stdout.columns ?? 80, 100);
-    const bar  = chalk.dim('─'.repeat(cols - 4));
     console.log(`\n  ${chalk.hex('#7C3AED').bold('◈  Plan')}  ${GRAD_SEP}`);
-    console.log(`  ${bar}`);
     for (let i = 0; i < steps.length; i++) {
-      console.log(`  ${chalk.hex('#06B6D4').bold(String(i + 1).padStart(2) + '.')}  ${chalk.white(steps[i])}`);
+      console.log(`  ${chalk.hex('#06B6D4').bold(`${String(i + 1).padStart(2)}.`)}  ${chalk.white(steps[i])}`);
     }
-    console.log(`  ${bar}`);
+    console.log(`  ${chalk.dim('─'.repeat(Math.min(cols - 4, 60)))}`);
   }
 
   private onToolCall(name: string, args: Record<string, unknown>): void {
+    // Discard any buffered thought — it was intermediate reasoning before this tool call
+    this.pendingThought = '';
     this.stopSpinner();
     this.flushStream();
-    this.lastStatus = '';
-    this.toolStartMs = Date.now();
+    this.lastStatus    = '';
+    this.toolStartMs   = Date.now();
+    this.pendingToolName = name;
+    this.pendingToolArgs = args;
 
-    const cols      = Math.min(process.stdout.columns ?? 80, 100);
-    const toolLabel = chalk.hex('#F59E0B').bold(`⚡  ${name}`);
-    const sep       = chalk.dim('─'.repeat(cols - 4));
-    console.log(`\n  ${toolLabel}\n  ${sep}`);
-    for (const [k, v] of Object.entries(args)) {
-      let val: string;
-      if (typeof v === 'string') {
-        const vLines = v.split('\n');
-        val = vLines[0].slice(0, 300);
-        if (vLines[0].length > 300) val += chalk.dim('…');
-        if (vLines.length > 1) val += chalk.dim(` (+${vLines.length - 1} lines)`);
-      } else {
-        val = JSON.stringify(v);
-        if (val.length > 300) val = val.slice(0, 300) + chalk.dim('…');
-      }
-      console.log(`     ${chalk.dim(k + ':')} ${chalk.hex('#E5E7EB')(val)}`);
-    }
-    this.startSpinner(chalk.dim(`     running ${name}…`), 'yellow', 'dots8Bit');
+    const arg  = this.formatToolArg(name, args);
+    const text = `${chalk.hex('#F59E0B')('⚙')}  ${chalk.white.bold(name)}${arg ? `  ${chalk.dim(arg)}` : ''}`;
+    this.startSpinner(`  ${text}`, 'yellow', 'dots8Bit');
   }
 
   private onToolResult(name: string, output: string, error?: boolean): void {
+    const ms = this.elapsedMs(this.toolStartMs);
     this.stopSpinner();
-    const ms   = this.elapsedMs(this.toolStartMs);
-    const tag  = chalk.dim(`  ${ms}`);
-    const safe = (output ?? '').trim();
-    const MAX  = 60;
+
+    const arg      = this.formatToolArg(this.pendingToolName, this.pendingToolArgs);
+    const nameStr  = chalk.white(name);
+    const argStr   = arg ? chalk.dim(`  ${arg}`) : '';
+    const msStr    = chalk.dim(`  ${ms}`);
 
     if (error) {
-      const lines = safe ? safe.split('\n') : ['(no output)'];
-      console.log(`     ${theme.error('✗')}  ${chalk.hex('#EF4444')(lines[0].slice(0, 300))}${tag}`);
-      for (const l of lines.slice(1, 20)) {
-        console.log(`        ${chalk.hex('#EF4444')(l.slice(0, 250))}`);
+      const safe      = (output ?? '').trim();
+      const firstLine = safe.split('\n')[0].slice(0, 160);
+      console.log(`  ${chalk.hex('#EF4444')('⚙')}  ${nameStr}${argStr}  ${chalk.hex('#EF4444')('✗')}${msStr}`);
+      if (firstLine) {
+        console.log(`     ${chalk.hex('#EF4444').dim(firstLine)}`);
       }
-      if (lines.length > 20) {
-        console.log(`        ${chalk.dim(`… ${lines.length - 20} more lines`)}`);
+      const rest = safe.split('\n').slice(1, 8);
+      for (const l of rest) {
+        if (l.trim()) console.log(`     ${chalk.hex('#EF4444').dim(l.slice(0, 160))}`);
       }
     } else {
-      const lines     = safe ? safe.split('\n') : [];
-      const shown     = lines.slice(0, MAX);
-      const remaining = lines.length - MAX;
-      const body      = shown.map((l) => `        ${chalk.hex('#D1D5DB')(l.slice(0, 300))}`).join('\n');
-      console.log(`     ${theme.success('✓')}${tag}`);
-      if (body.trim()) {
-        console.log(body);
-        if (remaining > 0) {
-          console.log(`\n        ${chalk.dim(`… ${remaining} more lines`)}`);
-        }
-      }
+      console.log(`  ${chalk.hex('#F59E0B')('⚙')}  ${nameStr}${argStr}  ${chalk.hex('#10B981')('✓')}${msStr}`);
     }
   }
 
@@ -340,15 +366,16 @@ export class EventRenderer {
     this.flushStream();
     const pct = Math.round((1 - to / from) * 100);
     console.log(
-      `\n  ${theme.info('↺')}  Context compressed  ` +
-      `${theme.warning(String(from))} → ${theme.success(String(to))} tokens  ` +
-      theme.dim(`(${pct}% freed)`)
+      `\n  ${chalk.hex('#3B82F6')('↺')}  ${chalk.dim('Context compressed  ')}` +
+      `${chalk.hex('#F59E0B')(String(from))} ${chalk.dim('→')} ${chalk.hex('#10B981')(String(to))} ` +
+      `${chalk.dim(`tokens  (${pct}% freed)`)}`
     );
   }
 
   private onError(message: string, recoverable: boolean): void {
     this.stopSpinner();
     this.flushStream();
+    this.pendingThought = '';
     this.lastStatus = '';
     const color = recoverable ? '#F59E0B' : '#EF4444';
     const label = recoverable ? '⚠  Warning' : '✗  Error';
@@ -376,74 +403,56 @@ export class EventRenderer {
 
     const clean = (summary ?? '').replace(/^(APEX_TASK_COMPLETE|KEEPCODE_TASK_COMPLETE):?\s*/i, '').trim();
 
-    // If this content was already shown via onThought, skip repeating it in the box
-    const alreadyShown = clean === this.lastThoughtContent;
-    this.lastThoughtContent = ''; // reset for next run
+    // Use buffered pending thought (from last iteration) or fall back to summary
+    const content = this.pendingThought || clean;
+    this.pendingThought = '';
 
-    // Render summary with inline markdown — full content, no truncation
-    const block = (!alreadyShown && clean)
-      ? clean.split('\n').map((l) => {
-          if (l.trim() === '') return '';
-          const ri = l
-            .replace(/\*\*\*(.+?)\*\*\*/g, (_, t) => chalk.white.bold.italic(t))
-            .replace(/\*\*(.+?)\*\*/g,     (_, t) => chalk.white.bold(t))
-            .replace(/`([^`]+)`/g,         (_, t) => chalk.hex('#F9FAFB').bgHex('#374151')(` ${t} `));
-          if (/^# /.test(l))   return `  ${chalk.white.bold(ri.replace(/^# /, ''))}`;
-          if (/^## /.test(l))  return `  ${chalk.hex('#06B6D4').bold(ri.replace(/^## /, ''))}`;
-          if (/^### /.test(l)) return `  ${chalk.hex('#7C3AED').bold(ri.replace(/^### /, ''))}`;
-          if (/^[-*] /.test(l)) return `  ${chalk.hex('#7C3AED')('●')} ${chalk.white(ri.replace(/^[-*] /, ''))}`;
-          if (/^\d+\. /.test(l)) {
-            const m = l.match(/^(\d+)\. (.+)$/);
-            return m ? `  ${chalk.hex('#06B6D4').bold(m[1] + '.')} ${chalk.white(m[2])}` : `  ${chalk.white(ri)}`;
-          }
-          return `  ${chalk.white(ri)}`;
-        }).join('\n')
-      : `  ${chalk.dim('(task complete)')}`;
+    // ── Render response ───────────────────────────────────────────────────────
+    if (content) {
+      const cols = Math.min(process.stdout.columns ?? 80, 100);
+      const sep  = chalk.dim('─'.repeat(Math.max(2, cols - 18)));
+      console.log(`\n  ${chalk.hex('#06B6D4').bold('◆  Response')}  ${sep}`);
+      renderMd(content);
+    }
 
+    // ── Stats footer ──────────────────────────────────────────────────────────
+    const dot   = chalk.dim('  ·  ');
     const stats = [
       chalk.dim(`${iterations} iter${iterations !== 1 ? 's' : ''}`),
-      chalk.dim(`${toolCalls} tool call${toolCalls !== 1 ? 's' : ''}`),
-      chalk.dim(`↑${inputTokenCount.toLocaleString()} in  ↓${tokenCount.toLocaleString()} out`),
+      chalk.dim(`${toolCalls} tool${toolCalls !== 1 ? 's' : ''}`),
+      chalk.dim(`↑${(inputTokenCount ?? 0).toLocaleString()} in`),
+      chalk.dim(`↓${tokenCount.toLocaleString()} out`),
       theme.accent(elapsed),
-    ].join(chalk.dim('  ·  '));
+    ].join(dot);
 
-    const width = Math.min(process.stdout.columns ?? 80, 94);
+    const cols = Math.min(process.stdout.columns ?? 80, 100);
+    const rule = chalk.hex('#10B981').dim('─'.repeat(Math.max(2, cols - 4)));
+    console.log(`\n  ${rule}`);
+    console.log(`  ${chalk.hex('#10B981')('✔')}  ${chalk.hex('#10B981').bold('Done')}${dot}${stats}\n`);
 
-    console.log(
-      '\n' +
-      boxen(`${block}\n\n  ${stats}`, {
-        padding:          { top: 1, bottom: 1, left: 1, right: 1 },
-        width,
-        borderStyle:      'round',
-        borderColor:      '#10B981',
-        title:            chalk.hex('#10B981').bold('  ✔  Task Complete  '),
-        titleAlignment:   'center',
-      })
-    );
     this.runStartMs = Date.now(); // reset for next run in REPL
   }
 
   private onAbort(): void {
     this.stopSpinner();
     this.flushStream();
+    this.pendingThought = '';
     this.lastStatus = '';
     console.log(`\n  ${theme.warning('⊗')}  ${theme.warning.bold('Aborted.')}\n`);
   }
 
   private onIteration(n: number, max: number): void {
-    // Track iteration counts for spinner label — don't print text directly
     this.curIter = n;
     this.maxIter = max;
-    this.lastStatus = ''; // Re-allow same status to re-render with updated iter
+    this.lastStatus = ''; // allow same status to re-render with updated iter count
   }
 
   private onTokenUsage(totalIn: number, totalOut: number): void {
     this.totalIn  = totalIn;
     this.totalOut = totalOut;
-    // Rebuild spinner text from stored base to avoid ANSI regex fragility
     if (this.spinner?.isSpinning && this.spinnerBaseText) {
       this.spinner.text = this.spinnerBaseText +
-        theme.dim(`  │ ↑${totalIn.toLocaleString()} ↓${totalOut.toLocaleString()}`);
+        chalk.dim(`  ↑${totalIn.toLocaleString()} ↓${totalOut.toLocaleString()}`);
     }
   }
 
