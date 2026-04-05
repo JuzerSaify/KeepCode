@@ -1,0 +1,12 @@
+{
+  "model": "",
+  "provider": "ollama",
+  "apiBaseUrl": "http://localhost:11434",
+  "temperature": 0.7,
+  "maxIterations": 50,
+  "contextWindow": 16384,
+  "maxTokens": 8192,
+  "workingDir": "C:\\Users\\Juzer\\Desktop\\apexag",
+  "autoApprove": false,
+  "verbose": false
+}

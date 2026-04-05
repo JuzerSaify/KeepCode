@@ -26,6 +26,10 @@ registerTool({
   },
   handler: async (args: Record<string, unknown>, config: AgentConfig) => {
     const filePath = path.resolve(config.workingDir, String(args.path));
+    const safeRoot = path.resolve(config.workingDir);
+    if (!filePath.startsWith(safeRoot + path.sep) && filePath !== safeRoot) {
+      return `Error: Path '${args.path}' escapes the working directory.`;
+    }
     const content = await fs.readFile(filePath, 'utf8');
     const allLines = content.split('\n');
     const ranges = args.ranges as Array<{ start: number; end: number }>;

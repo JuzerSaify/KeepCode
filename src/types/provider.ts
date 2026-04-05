@@ -97,4 +97,5 @@ export interface OllamaStreamChunk {
   message: Partial<OllamaChatMessage>;
   done: boolean;
   eval_count?: number;
+  prompt_eval_count?: number;
 }

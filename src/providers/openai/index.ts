@@ -68,7 +68,8 @@ function toOAIMessages(messages: Message[]): OAIMessage[] {
     // Pass through tool_calls on assistant messages
     if (m.tool_calls && m.tool_calls.length > 0) {
       msg.tool_calls = m.tool_calls.map((tc, i) => ({
-        id: `call_${i}`,
+        // Preserve original id so tool result messages' tool_call_id can match
+        id: tc.id ?? `call_${i}`,
         type: 'function' as const,
         function: {
           name: tc.function.name,
@@ -81,8 +82,8 @@ function toOAIMessages(messages: Message[]): OAIMessage[] {
     }
 
     // tool role messages need tool_call_id
-    if (m.role === 'tool') {
-      msg.role = 'tool';
+    if (m.role === 'tool' && m.tool_call_id) {
+      msg.tool_call_id = m.tool_call_id;
     }
 
     return msg;

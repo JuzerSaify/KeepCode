@@ -13,8 +13,12 @@ export interface ContentBlock {
 export interface Message {
   role: Role;
   content: string | ContentBlock[];
-  /** Ollama tool_calls — present on assistant messages that invoked tools */
-  tool_calls?: Array<{ function: { name: string; arguments: Record<string, unknown> } }>;
+  /** Assistant messages that invoked tools — id is required for proper tool result matching */
+  tool_calls?: Array<{ id?: string; function: { name: string; arguments: Record<string, unknown> } }>;
+  /** Present on role:'tool' messages — matches the tool call id from the assistant turn */
+  tool_call_id?: string;
+  /** Present on role:'tool' messages — the name of the function that was called */
+  name?: string;
 }
 
 export type AgentStatus =

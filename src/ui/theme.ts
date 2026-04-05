@@ -11,14 +11,16 @@ export const theme = {
   info:    chalk.hex('#3B82F6'),        // blue
   dim:     chalk.dim,
   bold:    chalk.bold,
+  white:   chalk.white,
 
   // Compound styles
-  label:   (s: string) => chalk.hex('#7C3AED').bold(s),
-  value:   (s: string) => chalk.hex('#E5E7EB')(s),
-  path:    (s: string) => chalk.hex('#06B6D4').underline(s),
-  code:    (s: string) => chalk.hex('#F9FAFB').bgHex('#1F2937')(' ' + s + ' '),
-  step:    (n: number, total: number) =>
-    chalk.hex('#6B7280')(`[${n}/${total}]`),
+  label:      (s: string) => chalk.hex('#7C3AED').bold(s),
+  value:      (s: string) => chalk.hex('#E5E7EB')(s),
+  path:       (s: string) => chalk.hex('#06B6D4').underline(s),
+  code:       (s: string) => chalk.hex('#F9FAFB').bgHex('#1F2937')(' ' + s + ' '),
+  heading:    (s: string) => chalk.white.bold(s),
+  inlineCode: (s: string) => chalk.hex('#F9FAFB').bgHex('#374151')(' ' + s + ' '),
+  step:       (n: number, total: number) => chalk.hex('#6B7280')(`[${n}/${total}]`),
 
   // Danger levels
   safe:        chalk.hex('#10B981'),

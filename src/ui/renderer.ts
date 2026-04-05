@@ -35,12 +35,145 @@ const STATUS_HINTS: Record<string, string> = {
 /** Compact gradient separator bar */
 const GRAD_SEP = chalk.hex('#7C3AED')('░') + chalk.hex('#4F46E5')('▒') + chalk.hex('#06B6D4')('▓') + chalk.hex('#0891B2')('█') + chalk.hex('#0E7490')('▓') + chalk.hex('#06B6D4')('▒') + chalk.hex('#7C3AED')('░');
 
-/** Handles all AgentEvent types — live spinner, per-tool timing, rich formatting */
+// ── Inline markdown helpers ───────────────────────────────────────────────────
+
+/** Apply inline markdown: ***bold-italic***, **bold**, *italic*, `inline code` */
+function renderInline(s: string): string {
+  return s
+    .replace(/\*\*\*(.+?)\*\*\*/g, (_, t) => chalk.white.bold.italic(t))
+    .replace(/\*\*(.+?)\*\*/g,     (_, t) => chalk.white.bold(t))
+    .replace(/\*(.+?)\*/g,         (_, t) => chalk.italic(t))
+    .replace(/`([^`\n]+)`/g,       (_, t) => chalk.hex('#F9FAFB').bgHex('#374151')(` ${t} `));
+}
+
+/**
+ * Full markdown → styled terminal renderer.
+ * Handles H1–H4, bold, italic, inline code, fenced code blocks,
+ * tables, ordered/unordered lists (nested), blockquotes, and hr.
+ */
+function renderMd(content: string, indent = '  '): void {
+  const cols = Math.min(process.stdout.columns ?? 80, 100);
+  const raw  = content.trim().split('\n');
+  let   inFence  = false;
+  let   fenceLang = '';
+  const tableRows: string[] = [];
+
+  const flushTable = (): void => {
+    if (tableRows.length === 0) return;
+    let isHeader = true;
+    for (const row of tableRows) {
+      // Skip separator rows like |---|---|
+      if (/^\|?[\s\-:|]+\|$/.test(row.trim())) continue;
+      const cells = row.replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+      if (isHeader) {
+        isHeader = false;
+        console.log(`${indent}${cells.map((c) => chalk.white.bold(c)).join(chalk.dim('  │  '))}`);
+        console.log(`${indent}${chalk.dim('─'.repeat(Math.min(cols - indent.length, 70)))}`);
+      } else {
+        console.log(`${indent}${cells.map((c) => chalk.hex('#E5E7EB')(c)).join(chalk.dim('  │  '))}`);
+      }
+    }
+    tableRows.length = 0;
+  };
+
+  for (const rawLine of raw) {
+    // ── Fenced code block ────────────────────────────────────────────────────
+    if (/^```/.test(rawLine)) {
+      if (!inFence) {
+        flushTable();
+        inFence    = true;
+        fenceLang  = rawLine.slice(3).trim();
+        const tag  = fenceLang ? chalk.hex('#F59E0B')(` ${fenceLang} `) : '';
+        const fill = chalk.dim('─'.repeat(Math.max(2, Math.min(cols - indent.length - fenceLang.length - 6, 44))));
+        console.log(`${indent}${chalk.dim('╭──')}${tag}${fill}`);
+      } else {
+        console.log(`${indent}${chalk.dim('╰' + '─'.repeat(Math.min(cols - indent.length - 2, 46)))}`);
+        inFence   = false;
+        fenceLang = '';
+      }
+      continue;
+    }
+    if (inFence) {
+      console.log(`${indent}${chalk.dim('│')} ${chalk.hex('#F9FAFB')(rawLine)}`);
+      continue;
+    }
+
+    // ── Table rows ────────────────────────────────────────────────────────────
+    if (/^\|/.test(rawLine)) { tableRows.push(rawLine); continue; }
+    flushTable();
+
+    const line = rawLine;
+    if (line.trim() === '')    { console.log(); continue; }
+
+    // ── Horizontal rule ──────────────────────────────────────────────────────
+    if (/^[-*_]{3,}\s*$/.test(line.trim())) {
+      console.log(`${indent}${chalk.dim('─'.repeat(Math.min(cols - indent.length, 70)))}`);
+      continue;
+    }
+
+    // ── Headings ─────────────────────────────────────────────────────────────
+    if (/^# /.test(line)) {
+      const text = renderInline(line.replace(/^# /, ''));
+      console.log(`\n${indent}${chalk.white.bold.underline(text)}`);
+      console.log(`${indent}${chalk.dim('═'.repeat(Math.min(line.length - 2, cols - indent.length - 2)))}`);
+      continue;
+    }
+    if (/^## /.test(line)) {
+      console.log(`\n${indent}${chalk.hex('#06B6D4').bold('◈  ' + renderInline(line.replace(/^## /, '')))}`);
+      continue;
+    }
+    if (/^### /.test(line)) {
+      console.log(`${indent}${chalk.hex('#7C3AED').bold('▸  ' + renderInline(line.replace(/^### /, '')))}`);
+      continue;
+    }
+    if (/^#### /.test(line)) {
+      console.log(`${indent}${chalk.dim('·  ' + renderInline(line.replace(/^#### /, '')))}`);
+      continue;
+    }
+
+    // ── Blockquote ───────────────────────────────────────────────────────────
+    if (/^> /.test(line)) {
+      console.log(`${indent}${chalk.dim('▎')} ${chalk.italic.hex('#9CA3AF')(renderInline(line.replace(/^> /, '')))}`);
+      continue;
+    }
+
+    // ── Unordered list (nested) ───────────────────────────────────────────────
+    const ulM = line.match(/^(\s*)[-*+] (.+)$/);
+    if (ulM) {
+      const depth  = Math.floor(ulM[1].length / 2);
+      const bullet = depth === 0 ? chalk.hex('#7C3AED')('●')
+                   : depth === 1 ? chalk.hex('#06B6D4')('○')
+                   : chalk.dim('▪');
+      console.log(`${indent}${'  '.repeat(depth)}${bullet} ${chalk.white(renderInline(ulM[2]))}`);
+      continue;
+    }
+
+    // ── Ordered list ─────────────────────────────────────────────────────────
+    const olM = line.match(/^(\s*)(\d+)[.)]\s+(.+)$/);
+    if (olM) {
+      const depth = Math.floor(olM[1].length / 2);
+      console.log(`${indent}${'  '.repeat(depth)}${chalk.hex('#06B6D4').bold(olM[2] + '.')} ${chalk.white(renderInline(olM[3]))}`);
+      continue;
+    }
+
+    // ── Indented code (4-space) ───────────────────────────────────────────────
+    if (/^ {4}/.test(line)) {
+      console.log(`${indent}${chalk.dim('│')} ${chalk.hex('#F9FAFB')(line.trimStart())}`);
+      continue;
+    }
+
+    // ── Normal paragraph ─────────────────────────────────────────────────────
+    console.log(`${indent}${chalk.white(renderInline(line))}`);
+  }
+
+  flushTable();
+}
 export class EventRenderer {
   private tokenBuffer = '';
   private inStream = false;
   private lastStatus = '';
   private spinner: Ora | null = null;
+  private spinnerBaseText = '';
   private toolStartMs = 0;
   private runStartMs = Date.now();
   private curIter = 0;
@@ -70,11 +203,13 @@ export class EventRenderer {
     if (this.spinner) {
       this.spinner.stop();
       this.spinner = null;
+      this.spinnerBaseText = '';
     }
   }
 
   private startSpinner(text: string, color: SpinColor = 'cyan', spinnerName = 'dots2'): void {
     this.stopSpinner();
+    this.spinnerBaseText = text;
     this.spinner = ora({ text, spinner: spinnerName as never, color }).start();
   }
 
@@ -108,10 +243,12 @@ export class EventRenderer {
   private onToken(token: string): void {
     this.stopSpinner();
     if (!this.inStream) {
-      process.stdout.write(`\n  ${chalk.hex('#7C3AED')('▌')} `);
+      const cols = Math.min(process.stdout.columns ?? 80, 100);
+      const sep  = chalk.dim('─'.repeat(cols - 2));
+      process.stdout.write(`\n  ${chalk.white.bold('▸ Streaming Response')}\n  ${sep}\n  `);
       this.inStream = true;
     }
-    process.stdout.write(theme.value(token));
+    process.stdout.write(chalk.white(token));
     this.tokenBuffer += token;
   }
 
@@ -119,35 +256,22 @@ export class EventRenderer {
     this.stopSpinner();
     this.flushStream();
     this.lastStatus = '';
-    const lines = content.trim().split('\n');
     console.log();
-    for (const line of lines) {
-      if (line.trim() === '') {
-        console.log();
-      } else if (/^#{1,3}\s/.test(line)) {
-        console.log(`  ${theme.brand.bold(line.replace(/^#+\s/, ''))}`);
-      } else if (/^\s*[-*]\s/.test(line)) {
-        console.log(`  ${theme.muted('·')} ${theme.muted(line.replace(/^\s*[-*]\s/, ''))}`);
-      } else if (/^\s*\d+\.\s/.test(line)) {
-        const m = line.match(/^\s*(\d+)\.\s(.+)$/);
-        if (m) console.log(`  ${theme.brand(m[1] + '.')} ${theme.muted(m[2])}`);
-        else   console.log(`  ${theme.muted(line)}`);
-      } else {
-        console.log(`  ${theme.muted.italic(line)}`);
-      }
-    }
+    renderMd(content);
   }
 
   private onPlan(steps: string[]): void {
     this.stopSpinner();
     this.flushStream();
     this.lastStatus = '';
-    console.log(`\n  ${theme.brand.bold('▸ Plan')}`);
-    console.log(`  ${GRAD_SEP}`);
+    const cols = Math.min(process.stdout.columns ?? 80, 100);
+    const bar  = chalk.dim('─'.repeat(cols - 4));
+    console.log(`\n  ${chalk.white.bold('◈ Plan')}  ${GRAD_SEP}`);
+    console.log(`  ${bar}`);
     for (let i = 0; i < steps.length; i++) {
-      console.log(`  ${theme.brand(`${String(i + 1).padStart(2)}.`)}  ${theme.value(steps[i])}`);
+      console.log(`  ${chalk.hex('#06B6D4').bold(String(i + 1).padStart(2) + '.')}  ${chalk.white(steps[i])}`);
     }
-    console.log(`  ${GRAD_SEP}`);
+    console.log(`  ${bar}`);
   }
 
   private onToolCall(name: string, args: Record<string, unknown>): void {
@@ -156,43 +280,54 @@ export class EventRenderer {
     this.lastStatus = '';
     this.toolStartMs = Date.now();
 
+    const cols      = Math.min(process.stdout.columns ?? 80, 100);
     const toolLabel = chalk.hex('#F59E0B').bold(`⚙  ${name}`);
-    const sep = theme.dim('─'.repeat(Math.min(name.length + 5, 44)));
+    const sep       = chalk.dim('─'.repeat(cols - 4));
     console.log(`\n  ${toolLabel}\n  ${sep}`);
     for (const [k, v] of Object.entries(args)) {
       let val: string;
       if (typeof v === 'string') {
-        const firstLine = v.split('\n')[0];
-        val = firstLine.length > 110 ? firstLine.slice(0, 110) + theme.dim('…') : firstLine;
-        if (v.split('\n').length > 1) val += theme.dim(` (+${v.split('\n').length - 1} lines)`);
+        const vLines = v.split('\n');
+        val = vLines[0].slice(0, 300);
+        if (vLines[0].length > 300) val += chalk.dim('…');
+        if (vLines.length > 1) val += chalk.dim(` (+${vLines.length - 1} lines)`);
       } else {
         val = JSON.stringify(v);
-        if (val.length > 110) val = val.slice(0, 110) + theme.dim('…');
+        if (val.length > 300) val = val.slice(0, 300) + chalk.dim('…');
       }
-      console.log(`     ${theme.muted(k + ':')} ${theme.value(val)}`);
+      console.log(`     ${chalk.dim(k + ':')} ${chalk.hex('#E5E7EB')(val)}`);
     }
-    // Spinner while tool executes
-    this.startSpinner(theme.dim(`     running ${name}…`), 'yellow', 'dots8Bit');
+    this.startSpinner(chalk.dim(`     running ${name}…`), 'yellow', 'dots8Bit');
   }
 
   private onToolResult(name: string, output: string, error?: boolean): void {
     this.stopSpinner();
-    const ms  = this.elapsedMs(this.toolStartMs);
-    const tag = theme.dim(`  ${ms}`);
+    const ms   = this.elapsedMs(this.toolStartMs);
+    const tag  = chalk.dim(`  ${ms}`);
+    const safe = (output ?? '').trim();
+    const MAX  = 60;
 
     if (error) {
-      const lines = output.trim().split('\n');
-      console.log(`     ${theme.error('✗')}  ${theme.error(lines[0].slice(0, 200))}${tag}`);
-      for (const l of lines.slice(1, 5)) {
-        console.log(`        ${theme.dim(l.slice(0, 140))}`);
+      const lines = safe ? safe.split('\n') : ['(no output)'];
+      console.log(`     ${theme.error('✗')}  ${chalk.hex('#EF4444')(lines[0].slice(0, 300))}${tag}`);
+      for (const l of lines.slice(1, 20)) {
+        console.log(`        ${chalk.hex('#EF4444')(l.slice(0, 250))}`);
+      }
+      if (lines.length > 20) {
+        console.log(`        ${chalk.dim(`… ${lines.length - 20} more lines`)}`);
       }
     } else {
-      const lines  = output.trim().split('\n');
-      const shown  = lines.slice(0, 10);
-      const more   = lines.length > 10 ? `\n        ${theme.dim(`… ${lines.length - 10} more lines`)}` : '';
-      const body   = shown.map((l) => `        ${theme.muted(l.slice(0, 130))}`).join('\n');
+      const lines     = safe ? safe.split('\n') : [];
+      const shown     = lines.slice(0, MAX);
+      const remaining = lines.length - MAX;
+      const body      = shown.map((l) => `        ${chalk.hex('#D1D5DB')(l.slice(0, 300))}`).join('\n');
       console.log(`     ${theme.success('✓')}${tag}`);
-      if (body.trim()) console.log(body + more);
+      if (body.trim()) {
+        console.log(body);
+        if (remaining > 0) {
+          console.log(`\n        ${chalk.dim(`… ${remaining} more lines`)}`);
+        }
+      }
     }
   }
 
@@ -211,8 +346,18 @@ export class EventRenderer {
     this.stopSpinner();
     this.flushStream();
     this.lastStatus = '';
-    const prefix = recoverable ? theme.warning('⚠  WARNING') : theme.error('✗  ERROR');
-    console.log(`\n${prefix}\n  ${theme.error(message)}\n`);
+    const color = recoverable ? '#F59E0B' : '#EF4444';
+    const label = recoverable ? '⚠  Warning' : '✗  Error';
+    console.log(
+      '\n' +
+      boxen(`  ${chalk.hex(color)(message)}`, {
+        padding: { top: 0, bottom: 0, left: 1, right: 1 },
+        borderStyle: 'round',
+        borderColor: color,
+        title: `  ${label}  `,
+        titleAlignment: 'left',
+      })
+    );
   }
 
   private onComplete(summary: string, iterations: number, toolCalls: number, tokenCount: number, inputTokenCount = 0): void {
@@ -225,27 +370,46 @@ export class EventRenderer {
       ? `${(totalMs / 1000).toFixed(1)}s`
       : `${Math.floor(totalMs / 60_000)}m ${Math.floor((totalMs % 60_000) / 1000)}s`;
 
-    const clean   = summary.replace(/^(APEX_TASK_COMPLETE|KEEPCODE_TASK_COMPLETE):?\s*/i, '').trim();
-    const display = clean.length > 800 ? clean.slice(0, 800) + '\n  ' + theme.dim('… trimmed') : clean;
-    const block   = display.split('\n').map((l) => `  ${l}`).join('\n');
+    const clean = (summary ?? '').replace(/^(APEX_TASK_COMPLETE|KEEPCODE_TASK_COMPLETE):?\s*/i, '').trim();
+
+    // Render summary with inline markdown — full content, no truncation
+    const block = clean
+      ? clean.split('\n').map((l) => {
+          if (l.trim() === '') return '';
+          const ri = l
+            .replace(/\*\*\*(.+?)\*\*\*/g, (_, t) => chalk.white.bold.italic(t))
+            .replace(/\*\*(.+?)\*\*/g,     (_, t) => chalk.white.bold(t))
+            .replace(/`([^`]+)`/g,         (_, t) => chalk.hex('#F9FAFB').bgHex('#374151')(` ${t} `));
+          if (/^# /.test(l))   return `  ${chalk.white.bold(ri.replace(/^# /, ''))}`;
+          if (/^## /.test(l))  return `  ${chalk.hex('#06B6D4').bold(ri.replace(/^## /, ''))}`;
+          if (/^### /.test(l)) return `  ${chalk.hex('#7C3AED').bold(ri.replace(/^### /, ''))}`;
+          if (/^[-*] /.test(l)) return `  ${chalk.hex('#7C3AED')('●')} ${chalk.white(ri.replace(/^[-*] /, ''))}`;
+          if (/^\d+\. /.test(l)) {
+            const m = l.match(/^(\d+)\. (.+)$/);
+            return m ? `  ${chalk.hex('#06B6D4').bold(m[1] + '.')} ${chalk.white(m[2])}` : `  ${chalk.white(ri)}`;
+          }
+          return `  ${chalk.white(ri)}`;
+        }).join('\n')
+      : `  ${chalk.dim('(task complete)')}`;
 
     const stats = [
-      theme.muted(`${iterations} iter${iterations !== 1 ? 's' : ''}`),
-      theme.muted(`${toolCalls} tool call${toolCalls !== 1 ? 's' : ''}`),
-      theme.muted(`↑${inputTokenCount.toLocaleString()} in  ↓${tokenCount.toLocaleString()} out`),
+      chalk.dim(`${iterations} iter${iterations !== 1 ? 's' : ''}`),
+      chalk.dim(`${toolCalls} tool call${toolCalls !== 1 ? 's' : ''}`),
+      chalk.dim(`↑${inputTokenCount.toLocaleString()} in  ↓${tokenCount.toLocaleString()} out`),
       theme.accent(elapsed),
-    ].join(theme.dim('  ·  '));
+    ].join(chalk.dim('  ·  '));
 
-    const title = chalk.hex('#10B981').bold('  ✓  Task Complete  ');
+    const width = Math.min(process.stdout.columns ?? 80, 94);
 
     console.log(
       '\n' +
       boxen(`${block}\n\n  ${stats}`, {
-        padding: { top: 1, bottom: 1, left: 1, right: 1 },
-        borderStyle: 'round',
-        borderColor: '#10B981',
-        title,
-        titleAlignment: 'center',
+        padding:          { top: 1, bottom: 1, left: 1, right: 1 },
+        width,
+        borderStyle:      'round',
+        borderColor:      '#10B981',
+        title:            chalk.hex('#10B981').bold('  ✓  Task Complete  '),
+        titleAlignment:   'center',
       })
     );
     this.runStartMs = Date.now(); // reset for next run in REPL
@@ -268,17 +432,16 @@ export class EventRenderer {
   private onTokenUsage(totalIn: number, totalOut: number): void {
     this.totalIn  = totalIn;
     this.totalOut = totalOut;
-    // Update spinner text with live token counts if spinning
-    if (this.spinner?.isSpinning) {
-      const tokenLabel = theme.dim(`  │ ↑${totalIn.toLocaleString()} ↓${totalOut.toLocaleString()} tok`);
-      // Refresh spinner text without restarting
-      this.spinner.text = this.spinner.text.replace(/ *│ [↑↓].*tok$/, '') + tokenLabel;
+    // Rebuild spinner text from stored base to avoid ANSI regex fragility
+    if (this.spinner?.isSpinning && this.spinnerBaseText) {
+      this.spinner.text = this.spinnerBaseText +
+        theme.dim(`  │ ↑${totalIn.toLocaleString()} ↓${totalOut.toLocaleString()}`);
     }
   }
 
   private onInsight(insight: string): void {
     this.stopSpinner();
     this.flushStream();
-    console.log(`\n  ${theme.brand('✦')}  ${theme.dim.italic(insight)}`);
+    console.log(`\n  ${chalk.hex('#7C3AED')('✦')}  ${chalk.dim('Insight:')} ${chalk.hex('#9CA3AF').italic(insight)}`);
   }
 }

@@ -103,3 +103,32 @@ export async function loadMemoryFromCloud(workingDir: string): Promise<string | 
 
   return (data?.content as string) ?? null;
 }
+
+// ── Diagnostics ───────────────────────────────────────────────────────────────
+
+export interface SupabaseStatus {
+  connected:   boolean;
+  authenticated: boolean;
+  latencyMs:   number | null;
+  error?:      string;
+}
+
+export async function checkSupabaseConnection(): Promise<SupabaseStatus> {
+  const start = Date.now();
+  try {
+    const { error } = await supabase.from('agent_sessions').select('session_id').limit(1);
+    const latencyMs = Date.now() - start;
+    if (error && error.code !== 'PGRST116') {
+      return { connected: false, authenticated: false, latencyMs, error: error.message };
+    }
+    const user = await auth.getUser();
+    return { connected: true, authenticated: !!user, latencyMs };
+  } catch (e: unknown) {
+    return {
+      connected:     false,
+      authenticated: false,
+      latencyMs:     null,
+      error:         e instanceof Error ? e.message : String(e),
+    };
+  }
+}

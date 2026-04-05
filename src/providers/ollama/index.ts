@@ -11,12 +11,28 @@ import type { Message, ToolDefinition, AgentConfig } from '../../types/index.js'
 
 /** Wrap OllamaModel into the normalized ModelInfo shape */
 function toModelInfo(m: OllamaModel): ModelInfo {
+  const n = m.name.toLowerCase();
   return {
     name: m.name,
     size: m.size,
-    supportsTools: m.details?.families?.includes('llama3') ||
-      m.name.includes('llama3') || m.name.includes('mistral') ||
-      m.name.includes('qwen') || m.name.includes('phi'),
+    supportsTools:
+      m.details?.families?.includes('llama3') ||
+      n.includes('llama3') ||
+      n.includes('llama-3') ||
+      n.includes('mistral') ||
+      n.includes('mixtral') ||
+      n.includes('qwen') ||
+      n.includes('phi') ||
+      n.includes('deepseek') ||
+      n.includes('command-r') ||
+      n.includes('gemma') ||
+      n.includes('minmax') ||
+      n.includes('minimax') ||
+      n.includes('hermes') ||
+      n.includes('firefunction') ||
+      n.includes('functionary') ||
+      n.includes('nexusraven') ||
+      n.includes('granite'),
   };
 }
 

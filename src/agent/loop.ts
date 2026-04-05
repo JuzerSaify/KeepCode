@@ -197,6 +197,7 @@ export class KeepCodeAgent {
         role: 'assistant',
         content: assistantContent,
         tool_calls: toolCalls.map((tc) => ({
+          id: tc.id,
           function: { name: tc.name, arguments: tc.arguments },
         })),
       });
@@ -237,12 +238,16 @@ export class KeepCodeAgent {
             : `\n[AGENT HINT] Tool "${call.name}" failed. Try with different arguments or use an alternative tool.`;
           state.messages.push({
             role: 'tool',
+            tool_call_id: call.id,
+            name: call.name,
             content: result.output + hint,
           });
         } else {
           this.toolErrorStreak = 0;
           state.messages.push({
             role: 'tool',
+            tool_call_id: call.id,
+            name: call.name,
             content: result.output,
           });
         }

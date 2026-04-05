@@ -78,11 +78,12 @@ function toAnthropicMessages(messages: Message[]): {
       : (m.content ?? '');
 
     if (m.role === 'tool') {
-      // Tool results must be in a user message with tool_result blocks
+      // Tool results must be in a user message with tool_result blocks.
+      // Use the stored tool_call_id so Anthropic can match result to the correct tool_use block.
       const last = result[result.length - 1];
       const block: AnthropicContent = {
         type: 'tool_result',
-        tool_use_id: 'tool_0', // Anthropic requires tool_use_id; we use a placeholder
+        tool_use_id: m.tool_call_id ?? 'tool_0',
         content: textContent,
       };
       if (last?.role === 'user' && Array.isArray(last.content)) {
@@ -98,10 +99,12 @@ function toAnthropicMessages(messages: Message[]): {
       if (textContent.trim()) {
         blocks.push({ type: 'text', text: textContent });
       }
-      for (const tc of m.tool_calls) {
+      for (let i = 0; i < m.tool_calls.length; i++) {
+        const tc = m.tool_calls[i];
+        // Each tool_use block must have a unique id that matches its tool_result's tool_use_id
         blocks.push({
           type: 'tool_use',
-          id: 'tool_0',
+          id: tc.id ?? `tool_${i}`,
           name: tc.function.name,
           input: tc.function.arguments ?? {},
         });

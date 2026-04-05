@@ -37,7 +37,8 @@ registerTool({
     try {
       const branch = await git('branch --show-current', cwd);
       const status = await git('status --short', cwd);
-      const ahead = await git('rev-list HEAD @{upstream}..HEAD --count 2>/dev/null || echo 0', cwd).catch(() => '0');
+      // Use try/catch instead of shell redirect (2>/dev/null) for cross-platform safety
+      const ahead = await git('rev-list HEAD @{upstream}..HEAD --count', cwd).catch(() => '0');
       return `Branch: ${branch}\nAhead by: ${ahead.trim()} commits\n\n${status || '(clean)'}`;
     } catch (err) {
       return `Error: ${err instanceof Error ? err.message : String(err)}`;

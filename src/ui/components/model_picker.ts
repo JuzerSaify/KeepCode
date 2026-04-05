@@ -4,7 +4,12 @@ import { theme } from '../theme.js';
 
 export interface ModelChoice {
   name: string;
+  /** Friendly display name for cloud-provider models (e.g. 'GPT-4o') */
+  displayName?: string;
+  /** Human-readable size for local Ollama models (e.g. '7.0 GB') */
   size: string;
+  /** Context window in tokens, shown as e.g. '128k ctx' for cloud models */
+  contextLength?: number;
   toolSupport: boolean;
 }
 
@@ -34,17 +39,21 @@ export async function pickModel(models: ModelChoice[]): Promise<string> {
       const header = [
         '',
         `  ${chalk.hex('#7C3AED').bold('KeepCode')} ${theme.dim('— select a model')}`,
-        `  ${theme.dim('─'.repeat(42))}`,
+        `  ${theme.dim('─'.repeat(46))}`,
       ];
       const rows = models.map((m, i) => {
-        const active = i === selected;
-        const cursor = active ? chalk.hex('#7C3AED')('▶ ') : '  ';
-        const name   = active ? chalk.hex('#7C3AED').bold(m.name) : theme.muted(m.name);
-        const size   = theme.dim(` ${m.size}`);
-        const tools  = m.toolSupport
+        const active  = i === selected;
+        const cursor  = active ? chalk.hex('#7C3AED')('▶ ') : '  ';
+        const label   = m.displayName ?? m.name;
+        const name    = active ? chalk.hex('#7C3AED').bold(label) : theme.muted(label);
+        // For cloud providers show context window; for Ollama show file size
+        const meta    = m.contextLength
+          ? theme.dim(` ${Math.round(m.contextLength / 1000)}k ctx`)
+          : m.size ? theme.dim(` ${m.size}`) : '';
+        const tools   = m.toolSupport
           ? chalk.hex('#10B981')(' ✓ tools')
           : theme.muted(' ✗ tools');
-        return `  ${cursor}${name}${size}${tools}`;
+        return `  ${cursor}${name}${meta}${tools}`;
       });
       const footer = [
         '',

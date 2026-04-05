@@ -133,6 +133,7 @@ export async function chatStreamFull(
     },
     done: true,
     eval_count: finalChunk?.eval_count ?? 0,
+    prompt_eval_count: finalChunk?.prompt_eval_count ?? 0,
   };
 }
 

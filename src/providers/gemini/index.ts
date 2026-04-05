@@ -105,10 +105,11 @@ function toGeminiContents(messages: Message[]): {
     }
 
     if (m.role === 'tool') {
-      // Gemini tool results live in a user turn as functionResponse parts
+      // Gemini tool results live in a user turn as functionResponse parts.
+      // The name must match the functionCall name used in the assistant turn.
       const last = contents[contents.length - 1];
       const part: GeminiPart = {
-        functionResponse: { name: 'tool', response: { content: textContent } },
+        functionResponse: { name: m.name ?? 'tool', response: { content: textContent } },
       };
       if (last?.role === 'user') {
         last.parts.push(part);

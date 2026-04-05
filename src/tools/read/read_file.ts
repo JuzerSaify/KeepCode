@@ -24,6 +24,11 @@ registerTool({
   },
   handler: async (args: Record<string, unknown>, config: AgentConfig) => {
     const filePath = path.resolve(config.workingDir, String(args.path));
+    // Path traversal guard — mirror the same check used in edit_file
+    const safeRoot = path.resolve(config.workingDir);
+    if (!filePath.startsWith(safeRoot + path.sep) && filePath !== safeRoot) {
+      return `Error: Path '${args.path}' escapes the working directory. Access outside '${safeRoot}' is not allowed.`;
+    }
     const stat = await fs.stat(filePath);
     if (stat.isDirectory()) return `Error: "${filePath}" is a directory. Use list_directory.`;
 

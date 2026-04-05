@@ -45,5 +45,7 @@ export function antiPatternsSection(): string {
 ❌ Never claim a build succeeds without running it
 ❌ Never claim code is correct based on visual inspection alone for any non-trivial logic
 ❌ Never report completion when there are unresolved errors in the output
-❌ Never skip the verification step because you're "confident" it works`;
+❌ Never skip the verification step because you're "confident" it works
+❌ Never read a file once and assume it hasn't changed — re-read after significant tool chains
+❌ Never call task_complete if there are pending TODOs or unresolved tool errors in the current session`;
 }
